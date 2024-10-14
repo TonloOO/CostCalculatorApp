@@ -8,17 +8,23 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var calculationHistory: CalculationHistory
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            CalculationHomeView()
+                .tabItem {
+                    Image(systemName: "doc.text")
+                    Text("费用计算")
+                }
+
+            ChatView()
+                .tabItem {
+                    Image(systemName: "message")
+                    Text("织梦·雅集")
+                }
         }
-        .padding()
     }
 }
 
-#Preview {
-    ContentView()
-}
+
