@@ -19,9 +19,12 @@ struct ResultView: View {
                 .padding()
             Text("客户名称/单号: \(customerName)")
                 .font(.subheadline)
+            
             Group {
-                Text("经纱成本：\(calculationResults.warpCost, specifier: "%.3f") 元/米")
-                Text("纬纱成本：\(calculationResults.weftCost, specifier: "%.3f") 元/米")
+                Text("总经纱成本：\(calculationResults.warpCost, specifier: "%.3f") 元/米")
+                Text("总经纱克重：\(calculationResults.warpWeight, specifier: "%.3f") 克")
+                Text("总纬纱成本：\(calculationResults.weftCost, specifier: "%.3f") 元/米")
+                Text("总纬纱克重：\(calculationResults.weftWeight, specifier: "%.3f") 克")
                 Text("牵经费用：\(calculationResults.warpingCost, specifier: "%.3f") 元/米")
                 Text("工费：\(calculationResults.laborCost, specifier: "%.3f") 元/米")
                 Text("日产量：\(calculationResults.dailyProduct, specifier: "%.3f") 米")

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23231" systemVersion="24A348" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="CalculationRecord" representedClassName="CalculationRecord" syncable="YES" codeGenerationType="class">
+        <attribute name="boxNumber" optional="YES" attributeType="String"/>
+        <attribute name="customerName" optional="YES" attributeType="String"/>
+        <attribute name="dailyLaborCost" optional="YES" attributeType="String"/>
+        <attribute name="dailyProduct" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="defaultDValue" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="edgeFinishing" optional="YES" attributeType="String"/>
+        <attribute name="efficiency" optional="YES" attributeType="String"/>
+        <attribute name="fabricShrinkage" optional="YES" attributeType="String"/>
+        <attribute name="fabricWidth" optional="YES" attributeType="String"/>
+        <attribute name="fixedCost" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="laborCost" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="machineSpeed" optional="YES" attributeType="String"/>
+        <attribute name="materialsResult" optional="YES" attributeType="Binary"/>
+        <attribute name="minutesPerDay" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="threading" optional="YES" attributeType="String"/>
+        <attribute name="totalCost" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="warpCost" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="warpDivider" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="warpingCost" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="warpWeight" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="warpYarnPrice" optional="YES" attributeType="String"/>
+        <attribute name="warpYarnTypeSelection" optional="YES" attributeType="String" valueTransformerName="NSSecureUnarchiveFromDataTransformerName"/>
+        <attribute name="warpYarnValue" optional="YES" attributeType="String"/>
+        <attribute name="weftCost" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="weftDensity" optional="YES" attributeType="String"/>
+        <attribute name="weftDivider" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="weftWeight" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="weftYarnPrice" optional="YES" attributeType="String"/>
+        <attribute name="weftYarnTypeSelection" optional="YES" attributeType="String" valueTransformerName="NSSecureUnarchiveFromDataTransformerName"/>
+        <attribute name="weftYarnValue" optional="YES" attributeType="String"/>
+    </entity>
+</model>
