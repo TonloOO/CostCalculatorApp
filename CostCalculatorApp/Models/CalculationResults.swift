@@ -14,4 +14,8 @@ class CalculationResults: ObservableObject {
     @Published var laborCost: Double = 0.0
     @Published var totalCost: Double = 0.0
     @Published var dailyProduct: Double = 0.0
+    @Published var warpWeight: Double = 0.0
+    @Published var weftWeight: Double = 0.0
+    
+    @Published var perMaterialResults: [MaterialCalculationResult] = []
 }

@@ -1,29 +1,24 @@
 //
-//  CostCalculatorAppApp.swift
+//  CostCalculatorApp.swift
 //  CostCalculatorApp
 //
 //  Created by Zishuo Li on 2024-09-24.
 //
 
 import SwiftUI
+import CoreData
 
 @main
 struct CostCalculatorApp: App {
-    @StateObject private var calculationHistory = CalculationHistory()
-    
+    let persistenceController = PersistenceController.shared
+
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(calculationHistory)
-        }
-        .onChange(of: scenePhase) {
-            if scenePhase == .background {
-                calculationHistory.saveHistory()
-            }
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }
     }
-    
-    @Environment(\.scenePhase) var scenePhase
 }
+
 
 

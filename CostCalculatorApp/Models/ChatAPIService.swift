@@ -13,9 +13,7 @@ import Foundation
 class ChatAPIService {
     static let shared = ChatAPIService()
     private init() {}
-    
-    private let apiKey = "app-kZLrGeyOmfWYByNAz8FrA9cx"
-    private let baseURL = "https://llm.shiran-tech.cn/v1"
+    private let baseURL = "https://zscy.space/api/v1/sse"
     private let user = UserManager.shared.userID
     
     // Fetch list of conversations
@@ -35,7 +33,6 @@ class ChatAPIService {
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
@@ -87,7 +84,6 @@ class ChatAPIService {
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
@@ -137,25 +133,21 @@ class ChatAPIService {
     }
     
     func deleteConversation(conversationID: String, completion: @escaping (Bool) -> Void) {
-        guard let url = URL(string: "\(baseURL)/conversations/\(conversationID)") else {
+        
+        var urlComponents = URLComponents(string: "\(baseURL)/conversations/\(conversationID)")!
+        urlComponents.queryItems = [
+            URLQueryItem(name: "user", value: user),
+            URLQueryItem(name: "conversation_id", value: conversationID),
+        ]
+        
+        guard let url = urlComponents.url else {
             completion(false)
             return
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let body: [String: Any] = ["user": user]
-        
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
-        } catch {
-            print("Error creating request body: \(error)")
-            completion(false)
-            return
-        }
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
@@ -170,9 +162,7 @@ class ChatAPIService {
                 return
             }
             
-            do {
-                completion(true)
-            }
+            completion(true)
         }.resume()
     }
 

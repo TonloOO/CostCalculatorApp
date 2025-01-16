@@ -8,10 +8,11 @@
 import SwiftUI
 import UIKit
 import NaturalLanguage
+import CoreData
 
 
 struct CostCalculatorView: View {
-    @EnvironmentObject var calculationHistory: CalculationHistory
+    @Environment(\.managedObjectContext) private var viewContext
 
     // User inputs
     @State private var customerName: String = ""
@@ -30,10 +31,18 @@ struct CostCalculatorView: View {
     @State private var dailyLaborCost: String = ""
     @State private var fixedCost: String = ""
 
+    
     @State private var warpYarnValue: String = ""
     @State private var warpYarnTypeSelection: YarnType = .dNumber
     @State private var weftYarnValue: String = ""
     @State private var weftYarnTypeSelection: YarnType = .dNumber
+    
+
+    @State private var materials: [Material] = [
+        Material(name: "单材料", warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: "1", weftRatio: "1", ratio: "1")
+    ]
+
+
 
     // Constants
     @State private var constants: CalculationConstants = CalculationConstants.defaultConstants
@@ -46,6 +55,8 @@ struct CostCalculatorView: View {
     @State private var clipboardContentToImport: String = ""
     
     @State private var activeAlert: AlertType?
+    @State private var showWarpPicker = false
+    @State private var showWeftPicker = false
 
 
     enum ActiveSheet: Identifiable {
@@ -76,21 +87,21 @@ struct CostCalculatorView: View {
     var body: some View {
         Form {
             Section(header: Text("客户信息")) {
-                    SuffixTextField(label: "客户名称/单号", text: $customerName, suffix: "")
+                SuffixTextField(label: "客户名称/单号", text: $customerName, suffix: "")
             }
+            
+            
             Section(header: Text("输入参数")) {
                 Group {
                     SuffixTextField(label: "筘号", text: $boxNumber, suffix: "", keyboardType: .decimalPad)
                     SuffixTextField(label: "穿入", text: $threading, suffix: "", keyboardType: .decimalPad)
                     SuffixTextField(label: "门幅", text: $fabricWidth, suffix: "cm", keyboardType: .decimalPad)
                     SuffixTextField(label: "加边", text: $edgeFinishing, suffix: "cm", keyboardType: .decimalPad)
-
-                    YarnInputField(yarnValue: $warpYarnValue, yarnTypeSelection: $warpYarnTypeSelection, label: "经纱")
-                    YarnInputField(yarnValue: $weftYarnValue, yarnTypeSelection: $weftYarnTypeSelection, label: "纬纱")
-
                     SuffixTextField(label: "织缩", text: $fabricShrinkage, suffix: "", keyboardType: .decimalPad)
-                    SuffixTextField(label: "经纱纱价", text: $warpYarnPrice, suffix: "元", keyboardType: .decimalPad)
-                    SuffixTextField(label: "纬纱纱价", text: $weftYarnPrice, suffix: "元", keyboardType: .decimalPad)
+                    YarnInputField(yarnValue: $materials[0].warpYarnValue, yarnTypeSelection: $materials[0].warpYarnTypeSelection, showPicker: $showWarpPicker, label: "经纱")
+                    YarnInputField(yarnValue: $materials[0].weftYarnValue, yarnTypeSelection: $materials[0].weftYarnTypeSelection, showPicker: $showWeftPicker, label: "纬纱")
+                    SuffixTextField(label: "经纱纱价", text: $materials[0].warpYarnPrice, suffix: "元", keyboardType: .decimalPad)
+                    SuffixTextField(label: "纬纱纱价", text: $materials[0].weftYarnPrice, suffix: "元", keyboardType: .decimalPad)
                     SuffixTextField(label: "下机纬密", text: $weftDensity, suffix: "根/cm", keyboardType: .decimalPad)
                     SuffixTextField(label: "车速", text: $machineSpeed, suffix: "RPM", keyboardType: .decimalPad)
                     SuffixTextField(label: "效率", text: $efficiency, suffix: "%", keyboardType: .decimalPad)
@@ -98,31 +109,29 @@ struct CostCalculatorView: View {
                     SuffixTextField(label: "牵经费用", text: $fixedCost, suffix: "元/米", keyboardType: .decimalPad)
                 }
             }
-
+            
             Section {
-                    Button(action: {
-                        HapticFeedbackManager.shared.impact(style: .medium)
-                        calculateCosts()
-                    }) {
-                        Text("计算总费用")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                    }
+                Button(action: {
+                    HapticFeedbackManager.shared.impact(style: .medium)
+                    calculateCosts()
+                }) {
+                    Text("计算总费用")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
-
-                Section {
-                    Button(action: {
-                        HapticFeedbackManager.shared.impact(style: .medium)
-                        activeSheet = .history
-                    }) {
-                        Text("查看历史记录")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                    }
+            }
+            
+            Section {
+                Button(action: {
+                    HapticFeedbackManager.shared.impact(style: .medium)
+                    activeSheet = .history
+                }) {
+                    Text("查看历史记录")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
-
-
-            // Constants Modification Section
+            }
+            
             Section(header: Text("常量设置")) {
                 Button(action: {
                     activeSheet = .constants
@@ -136,7 +145,7 @@ struct CostCalculatorView: View {
                 }
             }
         }
-        .navigationTitle("纱价总费用计算")
+        .navigationTitle("单材料纱价费用计算")
         .onChange(of: scenePhase) {
             if scenePhase == .active {
                 checkClipboardForParameters()
@@ -176,7 +185,7 @@ struct CostCalculatorView: View {
                 )
             case .history:
                 NavigationView {
-                    HistoryView(calculationHistory: _calculationHistory)
+                    HistoryView()
                         .navigationBarItems(trailing: Button("关闭") {
                             activeSheet = nil
                         })
@@ -184,6 +193,7 @@ struct CostCalculatorView: View {
             }
         }
     }
+
     
     let parameterSynonyms: [String: [String]] = [
         "筘号": ["筘号", "k号", "筘", "k"],
@@ -334,17 +344,12 @@ struct CostCalculatorView: View {
             fabricWidth: fabricWidth,
             edgeFinishing: edgeFinishing,
             fabricShrinkage: fabricShrinkage,
-            warpYarnPrice: warpYarnPrice,
-            weftYarnPrice: weftYarnPrice,
             weftDensity: weftDensity,
             machineSpeed: machineSpeed,
             efficiency: efficiency,
             dailyLaborCost: dailyLaborCost,
             fixedCost: fixedCost,
-            warpYarnValue: warpYarnValue,
-            warpYarnTypeSelection: warpYarnTypeSelection,
-            weftYarnValue: weftYarnValue,
-            weftYarnTypeSelection: weftYarnTypeSelection,
+            materials: materials,
             constants: constants,
             calculationResults: calculationResults,
             alertMessage: &alertMessage
@@ -352,37 +357,58 @@ struct CostCalculatorView: View {
         
         if calculationSuccess {
             // Save calculation record
-            let record = CalculationRecord(
-                customerName: customerName,
-                boxNumber: boxNumber,
-                threading: threading,
-                fabricWidth: fabricWidth,
-                edgeFinishing: edgeFinishing,
-                fabricShrinkage: fabricShrinkage,
-                warpYarnPrice: warpYarnPrice,
-                weftYarnPrice: weftYarnPrice,
-                weftDensity: weftDensity,
-                machineSpeed: machineSpeed,
-                efficiency: efficiency,
-                dailyLaborCost: dailyLaborCost,
-                fixedCost: fixedCost,
-                warpYarnValue: warpYarnValue,
-                warpYarnTypeSelection: warpYarnTypeSelection,
-                weftYarnValue: weftYarnValue,
-                weftYarnTypeSelection: weftYarnTypeSelection,
-                constants: constants,
-                warpCost: calculationResults.warpCost,
-                weftCost: calculationResults.weftCost,
-                warpingCost: calculationResults.warpingCost,
-                laborCost: calculationResults.laborCost,
-                totalCost: calculationResults.totalCost,
-                dailyProduct: calculationResults.dailyProduct,
-                date: Date()
-            )
-            calculationHistory.addRecord(record)
-
-            // Present results sheet after state updates
-            activeSheet = .results
+            let newRecord = CalculationRecord(context: viewContext)
+            newRecord.id = UUID()
+            newRecord.customerName = customerName
+            newRecord.boxNumber =  boxNumber
+            newRecord.threading =  threading
+            newRecord.fabricWidth = fabricWidth
+            newRecord.edgeFinishing = edgeFinishing
+            newRecord.fabricShrinkage = fabricShrinkage
+//            newRecord.warpYarnPrice = warpYarnPrice
+//            newRecord.weftYarnPrice = weftYarnPrice
+            newRecord.weftDensity = weftDensity
+            newRecord.machineSpeed = machineSpeed
+            newRecord.efficiency = efficiency
+            newRecord.dailyLaborCost = dailyLaborCost
+            newRecord.fixedCost = fixedCost
+//            newRecord.warpYarnValue = warpYarnValue
+//            newRecord.warpYarnTypeSelection = warpYarnTypeSelection.rawValue
+//            newRecord.weftYarnValue = weftYarnValue
+//            newRecord.weftYarnTypeSelection = weftYarnTypeSelection.rawValue
+            
+            // constants
+            newRecord.defaultDValue = constants.defaultDValue
+            newRecord.minutesPerDay = constants.minutesPerDay
+            newRecord.warpDivider = constants.warpDivider
+            newRecord.weftDivider = constants.weftDivider
+            
+            newRecord.warpCost = calculationResults.warpCost
+            newRecord.weftCost = calculationResults.weftCost
+            newRecord.warpWeight = calculationResults.warpWeight
+            newRecord.weftWeight = calculationResults.weftWeight
+            newRecord.warpingCost = calculationResults.warpingCost
+            newRecord.laborCost = calculationResults.laborCost
+            newRecord.totalCost = calculationResults.totalCost
+            newRecord.dailyProduct = calculationResults.dailyProduct
+            newRecord.date = Date()
+            
+            do {
+                let encoder = JSONEncoder()
+                newRecord.materialsResult = try encoder.encode(calculationResults.perMaterialResults)
+            } catch {
+                alertMessage = "无法保存材料数据：\(error.localizedDescription)"
+                self.activeAlert = .inputError(message: alertMessage)
+            }
+            
+            do {
+                try viewContext.save()
+                activeSheet = .results
+            } catch {
+                let nsError = error as NSError
+                alertMessage = "数据保存失败：\(nsError.localizedDescription)"
+                self.activeAlert = .inputError(message: alertMessage)
+            }
         } else {
             self.activeAlert = .inputError(message: alertMessage)
         }

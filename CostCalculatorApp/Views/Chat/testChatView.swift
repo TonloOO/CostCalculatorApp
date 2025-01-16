@@ -1,16 +1,15 @@
 //
-//  ChatView.swift
+//  testChatView.swift
 //  CostCalculatorApp
 //
-//  Created by Zishuo Li on 2024-10-05.
+//  Created by Zishuo Li on 2024-10-16.
 //
 
-// ChatView.swift
 
 import SwiftUI
 import MarkdownUI
 
-struct ChatView: View {
+struct TestChatView: View {
     @State private var messages: [Message] = []
     @State private var inputText: String = ""
     @State private var isSending: Bool = false
@@ -97,7 +96,11 @@ struct ChatView: View {
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .focused($isInputActive)
                     .disabled(isSending)
-                Button(action: sendMessage) {
+                Button(action: {
+                    Task {
+                        await sendMessage()
+                    }
+                }) {
                     Text("发送")
                 }
                 .disabled(inputText.isEmpty || isSending)
@@ -106,84 +109,26 @@ struct ChatView: View {
         }
     }
 
-    func sendMessage() {
-        let apiKey = "app-kZLrGeyOmfWYByNAz8FrA9cx"
-        let baseURL = "https://llm.shiran-tech.cn/v1"
-        let user = UserManager.shared.userID
-        guard !inputText.isEmpty else { return }
-
-        let userMessage = Message(id: UUID(), text: inputText, isUser: true, createdAt: Date().timeIntervalSince1970)
-        messages.append(userMessage)
-
-        let userInput = inputText
-        inputText = ""
-        isSending = true
-        isInputActive = false
-
-        // Prepare the response message placeholder to append the streamed response
-        let responseMessageID = UUID()
-        var responseMessage = Message(id: responseMessageID, text: "", isUser: false, createdAt: Date().timeIntervalSince1970)
-        messages.append(responseMessage)  // Add it to the messages for rendering
-
-        // API call logic directly in sendMessage
-        guard let url = URL(string: "\(baseURL)/chat-messages") else {
-            print("Invalid URL")
-            isSending = false
-            return
-        }
-
-        let parameters: [String: Any] = [
-            "query": userInput,
-            "inputs": [:],
-            "response_mode": "streaming",
-            "user": user,  // Replace with actual user ID
-            "conversation_id": selectedConversationID ?? ""
-        ]
-
-        guard let httpBody = try? JSONSerialization.data(withJSONObject: parameters) else {
-            print("Failed to serialize parameters")
-            isSending = false
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = httpBody
-
-        Task {
-            do {
-                let (stream, _) = try await URLSession.shared.bytes(for: request)
-                
-                for try await line in stream.lines {
-                    if line.starts(with: "data:") {
-                        let jsonString = String(line.dropFirst(5)) // Strip "data:" prefix
-                        if let jsonData = jsonString.data(using: .utf8),
-                           let chunk = try? JSONDecoder().decode(ChunkChatCompletionResponse.self, from: jsonData) {
-
-                            // Append the new chunk of response to the responseMessage
-                            responseMessage.text += chunk.answer
-
-                            // Update the UI on the main thread
-                            await MainActor.run {
-                                if let index = messages.firstIndex(where: { $0.id == responseMessageID }) {
-                                    messages[index] = responseMessage
-                                }
-                            }
-                        }
-                    }
-                }
-                await MainActor.run {
-                    isSending = false
-                }
-            } catch {
-                print("Error: \(error)")
-                await MainActor.run {
-                    isSending = false
-                }
-            }
-        }
+    func sendMessage() async {
+        
+//        guard !inputText.isEmpty else { return }
+//
+//        let userMessage = Message(id: UUID(), text: inputText, isUser: true, createdAt: Date().timeIntervalSince1970)
+//        messages.append(userMessage)
+//
+//        let userInput = inputText
+//        inputText = ""
+//        isSending = true
+//        isInputActive = false
+//
+//        let llamaManager = LlamaManager()
+//
+//        do {
+//            // Call the runLlamaModel function from LlamaManager
+//            try await llamaManager.runLlamaModel(prompt: userInput)
+//        } catch {
+//            print("Failed to run the LLaMA model: \(error)")
+//        }
     }
 
 
@@ -234,7 +179,7 @@ struct ChatView: View {
     }
 }
 
-struct ChatHistoryView: View {
+struct TestChatHistoryView: View {
     @Binding var conversations: [Conversation]
     var onSelectConversation: (Conversation) -> Void
     var onDeleteConversation: (Conversation) -> Void  // New closure for deleting a conversation
@@ -268,7 +213,7 @@ struct ChatHistoryView: View {
 }
 
 
-struct ChatView_Previews: PreviewProvider {
+struct TestChatView_Previews: PreviewProvider {
     static var previews: some View {
         ChatView()
     }

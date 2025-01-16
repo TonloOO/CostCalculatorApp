@@ -10,9 +10,8 @@ import SwiftUI
 struct YarnInputField: View {
     @Binding var yarnValue: String
     @Binding var yarnTypeSelection: YarnType
-    var label: String // Add a label parameter
-
-    @State private var showPicker = false
+    @Binding var showPicker: Bool
+    var label: String
 
     var body: some View {
         HStack {
@@ -43,3 +42,4 @@ struct YarnInputField: View {
         }
     }
 }
+
