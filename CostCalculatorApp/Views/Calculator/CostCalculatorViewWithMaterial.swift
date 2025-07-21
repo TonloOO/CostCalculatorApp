@@ -39,7 +39,8 @@ struct CostCalculatorViewWithMaterial: View {
     
 
     @State private var materials: [Material] = [
-        Material(name: "材料1", warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: "1", weftRatio: "1", ratio: "1")
+        Material(name: "材料1", warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: "1", weftRatio: "1", ratio: "1"),
+        Material(name: "材料2", warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: "1", weftRatio: "1", ratio: "1")
     ]
 
 
@@ -87,6 +88,7 @@ struct CostCalculatorViewWithMaterial: View {
             Section(header: Text("客户信息")) {
                 SuffixTextField(label: "客户名称/单号", text: $customerName, suffix: "")
             }
+            
             
             Section(header: HStack {
                 Text("材料列表")

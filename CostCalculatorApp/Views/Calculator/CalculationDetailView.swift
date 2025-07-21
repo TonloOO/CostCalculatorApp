@@ -10,40 +10,65 @@ import CoreData
 
 struct CalculationDetailView: View {
     @ObservedObject var record: CalculationRecord
+    
+    private var isSingleMaterial: Bool {
+        if let data = record.materialsResult, let results = decodeMaterialsResult(from: data) {
+            return results.count == 1 && results.first?.material.name == "单材料"
+        }
+        // For legacy records, check if we have yarn data
+        return record.warpYarnValue != nil && 
+               record.weftYarnValue != nil && 
+               record.warpYarnTypeSelection != nil && 
+               record.weftYarnTypeSelection != nil
+    }
 
     var body: some View {
         Form {
             Section(header: Text("客户信息")) {
-                Text("客户名称/单号: \(record.customerName!)")
+                Text("客户名称/单号: \(record.customerName ?? "未知")")
             }
             
             Section(header: Text("计算日期")) {
-                Text("\(record.date!, formatter: dateFormatter)")
+                if let date = record.date {
+                    Text("\(date, formatter: dateFormatter)")
+                } else {
+                    Text("未知时间")
+                }
             }
             
-            Section(header: Text("材料明细")) {
+            Section(header: Text(isSingleMaterial ? "纱线信息" : "材料明细")) {
                 if let data = record.materialsResult, let results: [MaterialCalculationResult] = decodeMaterialsResult(from: data) {
-                    ForEach(results, id: \.self) { result in
-                        DisclosureGroup(result.material.name) {
-                            MaterialDetailView(material: result)
+                    // Check if this is a single material calculation
+                    if isSingleMaterial {
+                        // For single material, show details directly without DisclosureGroup
+                        MaterialDetailView(material: results.first!)
+                    } else {
+                        // For multiple materials, use DisclosureGroup
+                        ForEach(results, id: \.self) { result in
+                            DisclosureGroup(result.material.name) {
+                                MaterialDetailView(material: result)
+                            }
                         }
                     }
                 } else {
-                    DisclosureGroup("材料明细") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("材料名称: 未知")
-                            Text("经纱规格: \(record.warpYarnValue!) \(record.warpYarnTypeSelection!)")
-                            Text("纬纱规格: \(record.weftYarnValue!) \(record.weftYarnTypeSelection!)")
-                            Text("经纱纱价: \(record.warpYarnPrice!) 元")
-                            Text("纬纱纱价: \(record.weftYarnPrice!) 元")
-                            Text("比例: 1")
-                            Divider()
-                            Text("经纱克重: \(record.warpWeight, specifier: "%.3f") g")
-                            Text("经纱成本: \(record.warpCost, specifier: "%.3f") 元")
-                            Text("纬纱克重: \(record.weftWeight, specifier: "%.3f") g")
-                            Text("纬纱成本: \(record.weftCost, specifier: "%.3f") 元")
+                    // Legacy single material record format
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let warpYarnValue = record.warpYarnValue,
+                           let warpYarnType = record.warpYarnTypeSelection {
+                            Text("经纱规格: \(warpYarnValue) \(warpYarnType)")
+                        }
+                        if let weftYarnValue = record.weftYarnValue,
+                           let weftYarnType = record.weftYarnTypeSelection {
+                            Text("纬纱规格: \(weftYarnValue) \(weftYarnType)")
+                        }
+                        if let warpYarnPrice = record.warpYarnPrice {
+                            Text("经纱纱价: \(warpYarnPrice) 元")
+                        }
+                        if let weftYarnPrice = record.weftYarnPrice {
+                            Text("纬纱纱价: \(weftYarnPrice) 元")
                         }
                     }
+                    .padding(8)
                 }
             }
 
@@ -62,16 +87,36 @@ struct CalculationDetailView: View {
             }
             
             Section(header: Text("输入参数")) {
-                Text("筘号: \(record.boxNumber!)")
-                Text("穿入: \(record.threading!)")
-                Text("门幅: \(record.fabricWidth!) cm")
-                Text("加边: \(record.edgeFinishing!) cm")
-                Text("织缩: \(record.fabricShrinkage!)")
-                Text("下机纬密: \(record.weftDensity!) 根/cm")
-                Text("车速: \(record.machineSpeed!)")
-                Text("效率: \(record.efficiency!) %")
-                Text("日工费: \(record.dailyLaborCost!) 元")
-                Text("牵经费用: \(record.fixedCost!) 元/米")
+                if let boxNumber = record.boxNumber {
+                    Text("筘号: \(boxNumber)")
+                }
+                if let threading = record.threading {
+                    Text("穿入: \(threading)")
+                }
+                if let fabricWidth = record.fabricWidth {
+                    Text("门幅: \(fabricWidth) cm")
+                }
+                if let edgeFinishing = record.edgeFinishing {
+                    Text("加边: \(edgeFinishing) cm")
+                }
+                if let fabricShrinkage = record.fabricShrinkage {
+                    Text("织缩: \(fabricShrinkage)")
+                }
+                if let weftDensity = record.weftDensity {
+                    Text("下机纬密: \(weftDensity) 根/cm")
+                }
+                if let machineSpeed = record.machineSpeed {
+                    Text("车速: \(machineSpeed)")
+                }
+                if let efficiency = record.efficiency {
+                    Text("效率: \(efficiency) %")
+                }
+                if let dailyLaborCost = record.dailyLaborCost {
+                    Text("日工费: \(dailyLaborCost) 元")
+                }
+                if let fixedCost = record.fixedCost {
+                    Text("牵经费用: \(fixedCost) 元/米")
+                }
             }
         }
         .navigationTitle("计算详情")
@@ -105,22 +150,25 @@ struct CalculationDetailView: View {
 
 
 struct MaterialDetailView: View {
-    var material: MaterialCalculationResult  // Just passing the value
+    var material: MaterialCalculationResult
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("材料名称: \(material.material.name)")
+            // Only show material name if it's not "单材料"
+            if material.material.name != "单材料" {
+                Text("材料名称: \(material.material.name)")
+            }
+            
             Text("经纱规格: \(material.material.warpYarnValue) \(material.material.warpYarnTypeSelection.rawValue)")
             Text("纬纱规格: \(material.material.weftYarnValue) \(material.material.weftYarnTypeSelection.rawValue)")
             Text("经纱纱价: \(material.material.warpYarnPrice) 元")
             Text("纬纱纱价: \(material.material.weftYarnPrice) 元")
-            Text("经纱占比: \(material.material.warpRatio ?? material.material.ratio)")
-            Text("纬纱占比: \(material.material.weftRatio ?? material.material.ratio)")
-            Divider()
-            Text("经纱克重: \(material.warpWeight, specifier: "%.3f") g")
-            Text("经纱成本: \(material.warpCost, specifier: "%.3f") 元")
-            Text("纬纱克重: \(material.weftWeight, specifier: "%.3f") g")
-            Text("纬纱成本: \(material.weftCost, specifier: "%.3f") 元")
+            
+            // Only show ratios if it's not a single material (ratio would be 1)
+            if material.material.name != "单材料" {
+                Text("经纱占比: \(material.material.warpRatio ?? material.material.ratio)")
+                Text("纬纱占比: \(material.material.weftRatio ?? material.material.ratio)")
+            }
         }
         .padding(8)
     }

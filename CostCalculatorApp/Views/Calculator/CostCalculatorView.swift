@@ -16,6 +16,10 @@ struct CostCalculatorView: View {
 
     // User inputs
     @State private var customerName: String = ""
+    @State private var useDirectWarpWeight: Bool = false
+    @State private var directWarpWeight: String = ""
+    @State private var useDirectWeftWeight: Bool = false
+    @State private var directWeftWeight: String = ""
     @State private var boxNumber: String = ""
     @State private var threading: String = ""
     @State private var fabricWidth: String = ""
@@ -90,19 +94,57 @@ struct CostCalculatorView: View {
                 SuffixTextField(label: "客户名称/单号", text: $customerName, suffix: "")
             }
             
+            Section(header: Text("经纬克重")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Toggle("经纱重量", isOn: $useDirectWarpWeight)
+                            .toggleStyle(SwitchToggleStyle())
+                    }
+                    
+                    if useDirectWarpWeight {
+                        SuffixTextField(label: "经纱重量", text: $directWarpWeight, suffix: "g/m", keyboardType: .decimalPad)
+                    }
+                    
+                    HStack {
+                        Toggle("纬纱重量", isOn: $useDirectWeftWeight)
+                            .toggleStyle(SwitchToggleStyle())
+                    }
+                    
+                    if useDirectWeftWeight {
+                        SuffixTextField(label: "纬纱重量", text: $directWeftWeight, suffix: "g/m", keyboardType: .decimalPad)
+                    }
+                }
+            }
             
             Section(header: Text("输入参数")) {
                 Group {
-                    SuffixTextField(label: "筘号", text: $boxNumber, suffix: "", keyboardType: .decimalPad)
-                    SuffixTextField(label: "穿入", text: $threading, suffix: "", keyboardType: .decimalPad)
-                    SuffixTextField(label: "门幅", text: $fabricWidth, suffix: "cm", keyboardType: .decimalPad)
-                    SuffixTextField(label: "加边", text: $edgeFinishing, suffix: "cm", keyboardType: .decimalPad)
-                    SuffixTextField(label: "织缩", text: $fabricShrinkage, suffix: "", keyboardType: .decimalPad)
-                    YarnInputField(yarnValue: $materials[0].warpYarnValue, yarnTypeSelection: $materials[0].warpYarnTypeSelection, showPicker: $showWarpPicker, label: "经纱")
-                    YarnInputField(yarnValue: $materials[0].weftYarnValue, yarnTypeSelection: $materials[0].weftYarnTypeSelection, showPicker: $showWeftPicker, label: "纬纱")
+                    if !useDirectWarpWeight {
+                        SuffixTextField(label: "筘号", text: $boxNumber, suffix: "", keyboardType: .decimalPad)
+                        SuffixTextField(label: "穿入", text: $threading, suffix: "", keyboardType: .decimalPad)
+                        SuffixTextField(label: "门幅", text: $fabricWidth, suffix: "cm", keyboardType: .decimalPad)
+                        SuffixTextField(label: "加边", text: $edgeFinishing, suffix: "cm", keyboardType: .decimalPad)
+                        SuffixTextField(label: "织缩", text: $fabricShrinkage, suffix: "", keyboardType: .decimalPad)
+                    } else {
+                        if !useDirectWeftWeight {
+                            SuffixTextField(label: "门幅", text: $fabricWidth, suffix: "cm", keyboardType: .decimalPad)
+                            SuffixTextField(label: "加边", text: $edgeFinishing, suffix: "cm", keyboardType: .decimalPad)
+                        }
+                    }
+                    
+                    if !useDirectWarpWeight {
+                        YarnInputField(yarnValue: $materials[0].warpYarnValue, yarnTypeSelection: $materials[0].warpYarnTypeSelection, showPicker: $showWarpPicker, label: "经纱")
+                    }
+                    if !useDirectWeftWeight {
+                        YarnInputField(yarnValue: $materials[0].weftYarnValue, yarnTypeSelection: $materials[0].weftYarnTypeSelection, showPicker: $showWeftPicker, label: "纬纱")
+                    }
+                    
                     SuffixTextField(label: "经纱纱价", text: $materials[0].warpYarnPrice, suffix: "元", keyboardType: .decimalPad)
                     SuffixTextField(label: "纬纱纱价", text: $materials[0].weftYarnPrice, suffix: "元", keyboardType: .decimalPad)
-                    SuffixTextField(label: "下机纬密", text: $weftDensity, suffix: "根/cm", keyboardType: .decimalPad)
+                    
+                    if !useDirectWeftWeight {
+                        SuffixTextField(label: "下机纬密", text: $weftDensity, suffix: "根/cm", keyboardType: .decimalPad)
+                    }
+                    
                     SuffixTextField(label: "车速", text: $machineSpeed, suffix: "RPM", keyboardType: .decimalPad)
                     SuffixTextField(label: "效率", text: $efficiency, suffix: "%", keyboardType: .decimalPad)
                     SuffixTextField(label: "日工费", text: $dailyLaborCost, suffix: "元", keyboardType: .decimalPad)
@@ -352,6 +394,10 @@ struct CostCalculatorView: View {
             materials: materials,
             constants: constants,
             calculationResults: calculationResults,
+            useDirectWarpWeight: useDirectWarpWeight,
+            directWarpWeight: directWarpWeight,
+            useDirectWeftWeight: useDirectWeftWeight,
+            directWeftWeight: directWeftWeight,
             alertMessage: &alertMessage
         )
         
@@ -372,6 +418,10 @@ struct CostCalculatorView: View {
             newRecord.efficiency = efficiency
             newRecord.dailyLaborCost = dailyLaborCost
             newRecord.fixedCost = fixedCost
+            newRecord.useDirectWarpWeight = useDirectWarpWeight
+            newRecord.directWarpWeight = directWarpWeight
+            newRecord.useDirectWeftWeight = useDirectWeftWeight
+            newRecord.directWeftWeight = directWeftWeight
 //            newRecord.warpYarnValue = warpYarnValue
 //            newRecord.warpYarnTypeSelection = warpYarnTypeSelection.rawValue
 //            newRecord.weftYarnValue = weftYarnValue

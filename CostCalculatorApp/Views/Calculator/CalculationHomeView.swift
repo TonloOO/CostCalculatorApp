@@ -11,48 +11,70 @@ struct CalculationHomeView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack {
+                VStack(spacing: 20) {
                     NavigationLink(destination: CostCalculatorView()) {
                         ZStack {
                             GeometryReader { geometry in
                                 Image("star")
                                     .resizable()
                                     .scaledToFill()
-                                    .frame(width: geometry.size.width, height: 300)
+                                    .frame(width: geometry.size.width, height: 180)
                                     .clipped()
                                     .cornerRadius(10)
                             }
-                            .frame(height: 300) // Set a fixed height for the container
+                            .frame(height: 180)
                             Text("单材料纱价费用计算")
-                                .font(.largeTitle)
+                                .font(.title2)
+                                .fontWeight(.semibold)
                                 .foregroundColor(.white)
                                 .shadow(radius: 5)
                         }
                         .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
                     }
-                }
-                VStack {
+                    
                     NavigationLink(destination: CostCalculatorViewWithMaterial()) {
                         ZStack {
                             GeometryReader { geometry in
                                 Image("sky")
                                     .resizable()
                                     .scaledToFill()
-                                    .frame(width: geometry.size.width, height: 300)
+                                    .frame(width: geometry.size.width, height: 180)
                                     .clipped()
                                     .cornerRadius(10)
                             }
-                            .frame(height: 300) // Set a fixed height for the container
+                            .frame(height: 180)
                             Text("多材料纱价费用计算")
-                                .font(.largeTitle)
+                                .font(.title2)
+                                .fontWeight(.semibold)
                                 .foregroundColor(.white)
                                 .shadow(radius: 5)
                         }
                         .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
+                    }
+                    
+                    NavigationLink(destination: HistoryView()) {
+                        ZStack {
+                            GeometryReader { geometry in
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.blue, Color.purple]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                                .frame(width: geometry.size.width, height: 180)
+                                .cornerRadius(10)
+                            }
+                            .frame(height: 180)
+                            Text("历史记录")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .shadow(radius: 5)
+                        }
+                        .padding(.horizontal, 20)
                     }
                 }
+                .padding(.top, 20)
+                .padding(.bottom, 10)
             }
             .navigationTitle("费用计算")
         }

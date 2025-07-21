@@ -8,6 +8,23 @@
 import Foundation
 
 struct Calculator {
+    
+    // MARK: - Error Types
+    enum CalculationError: LocalizedError {
+        case materialValidationFailed(String)
+        case materialCalculationFailed(String)
+        
+        var errorDescription: String? {
+            switch self {
+            case .materialValidationFailed(let message):
+                return message
+            case .materialCalculationFailed(let message):
+                return message
+            }
+        }
+    }
+    
+    // MARK: - Main Calculation Function
     static func calculate(
         boxNumber: String,
         threading: String,
@@ -22,179 +39,349 @@ struct Calculator {
         materials: [Material],
         constants: CalculationConstants,
         calculationResults: CalculationResults,
+        useDirectWarpWeight: Bool = false,
+        directWarpWeight: String = "",
+        useDirectWeftWeight: Bool = false,
+        directWeftWeight: String = "",
         alertMessage: inout String
     ) -> Bool {
         
-        let totalWarpRatio = materials.compactMap { Double($0.warpRatio ?? $0.ratio) }.reduce(0, +)
-        let totalWeftRatio = materials.compactMap { Double($0.weftRatio ?? $0.ratio) }.reduce(0, +)
-        if totalWarpRatio == 0 || totalWeftRatio == 0 {
-            alertMessage = "材料比例之和不能为零。"
+        // Validate material ratios
+        let ratioValidation = InputValidator.validateMaterialRatios(materials)
+        if case .failure(let message) = ratioValidation {
+            alertMessage = message
             return false
         }
         
+        // Validate basic inputs
+        let basicValidation = InputValidator.validateBasicInputsWithWeightSwitches(
+            boxNumber: boxNumber,
+            threading: threading,
+            fabricWidth: fabricWidth,
+            edgeFinishing: edgeFinishing,
+            fabricShrinkage: fabricShrinkage,
+            weftDensity: weftDensity,
+            machineSpeed: machineSpeed,
+            efficiency: efficiency,
+            dailyLaborCost: dailyLaborCost,
+            fixedCost: fixedCost,
+            useDirectWarpWeight: useDirectWarpWeight,
+            directWarpWeight: directWarpWeight,
+            useDirectWeftWeight: useDirectWeftWeight,
+            directWeftWeight: directWeftWeight
+        )
+        if case .failure(let message) = basicValidation {
+            alertMessage = message
+            return false
+        }
         
+        // Extract validated values
+        guard let validatedValues = extractValidatedValues(
+            boxNumber: boxNumber,
+            threading: threading,
+            fabricWidth: fabricWidth,
+            edgeFinishing: edgeFinishing,
+            fabricShrinkage: fabricShrinkage,
+            weftDensity: weftDensity,
+            machineSpeed: machineSpeed,
+            efficiency: efficiency,
+            dailyLaborCost: dailyLaborCost,
+            fixedCost: fixedCost
+        ) else {
+            alertMessage = "输入验证失败。"
+            return false
+        }
+        
+        // Calculate material costs
+        let materialCalculationResult = calculateMaterialCosts(
+            materials: materials,
+            validatedValues: validatedValues,
+            constants: constants,
+            useDirectWarpWeight: useDirectWarpWeight,
+            directWarpWeight: directWarpWeight,
+            useDirectWeftWeight: useDirectWeftWeight,
+            directWeftWeight: directWeftWeight,
+            alertMessage: &alertMessage
+        )
+        
+        if case .failure(let error) = materialCalculationResult {
+            alertMessage = error.localizedDescription
+            return false
+        }
+        
+        guard case .success(let materialResults) = materialCalculationResult else {
+            alertMessage = "材料计算失败。"
+            return false
+        }
+        
+        // Update calculation results
+        updateCalculationResults(
+            calculationResults: calculationResults,
+            materialResults: materialResults,
+            validatedValues: validatedValues,
+            constants: constants
+        )
+        
+        return true
+    }
+    
+    // MARK: - Helper Structures
+    private struct ValidatedValues {
+        let boxNumber: Double
+        let threading: Double
+        let fabricWidth: Double
+        let edgeFinishing: Double
+        let fabricShrinkage: Double
+        let weftDensity: Double
+        let machineSpeed: Double
+        let efficiency: Double
+        let dailyLaborCost: Double
+        let fixedCost: Double
+        
+        var actualFabricWidth: Double {
+            fabricWidth + edgeFinishing
+        }
+    }
+    
+    private struct MaterialCalculationResults {
+        let totalWarpWeight: Double
+        let totalWeftWeight: Double
+        let totalWarpCost: Double
+        let totalWeftCost: Double
+        let perMaterialResults: [MaterialCalculationResult]
+    }
+    
+    // MARK: - Private Helper Functions
+    private static func extractValidatedValues(
+        boxNumber: String,
+        threading: String,
+        fabricWidth: String,
+        edgeFinishing: String,
+        fabricShrinkage: String,
+        weftDensity: String,
+        machineSpeed: String,
+        efficiency: String,
+        dailyLaborCost: String,
+        fixedCost: String
+    ) -> ValidatedValues? {
+        
+        guard let boxNumberValue = Double(boxNumber),
+              let threadingValue = Double(threading),
+              let fabricWidthValue = Double(fabricWidth),
+              let edgeFinishingValue = Double(edgeFinishing),
+              let fabricShrinkageValue = Double(fabricShrinkage),
+              let weftDensityValue = Double(weftDensity),
+              let machineSpeedValue = Double(machineSpeed),
+              let efficiencyValue = Double(efficiency),
+              let laborCostValue = Double(dailyLaborCost),
+              let fixedCostValue = Double(fixedCost) else {
+            return nil
+        }
+        
+        return ValidatedValues(
+            boxNumber: boxNumberValue,
+            threading: threadingValue,
+            fabricWidth: fabricWidthValue,
+            edgeFinishing: edgeFinishingValue,
+            fabricShrinkage: fabricShrinkageValue,
+            weftDensity: weftDensityValue,
+            machineSpeed: machineSpeedValue,
+            efficiency: efficiencyValue,
+            dailyLaborCost: laborCostValue,
+            fixedCost: fixedCostValue
+        )
+    }
+    
+    private static func calculateMaterialCosts(
+        materials: [Material],
+        validatedValues: ValidatedValues,
+        constants: CalculationConstants,
+        useDirectWarpWeight: Bool,
+        directWarpWeight: String,
+        useDirectWeftWeight: Bool,
+        directWeftWeight: String,
+        alertMessage: inout String
+    ) -> Result<MaterialCalculationResults, CalculationError> {
         
         var totalWarpCost: Double = 0
         var totalWeftCost: Double = 0
         var totalWarpWeight: Double = 0
         var totalWeftWeight: Double = 0
+        var perMaterialResults: [MaterialCalculationResult] = []
         
-        // Input validation
-        guard let boxNumberValue = Double(boxNumber), boxNumberValue >= 0 else {
-            alertMessage = "请输入有效的筘号。"
-            return false
-        }
-
-        guard let threadingValue = Double(threading), threadingValue >= 0 else {
-            alertMessage = "请输入有效的穿入值。"
-            return false
-        }
-
-        guard let fabricWidthValue = Double(fabricWidth), fabricWidthValue >= 0 else {
-            alertMessage = "请输入有效的门幅。"
-            return false
-        }
-
-        guard let edgeFinishingValue = Double(edgeFinishing), edgeFinishingValue >= 0 else {
-            alertMessage = "请输入有效的加边。"
-            return false
-        }
-        
-        // 实际门幅 = 门幅 + 加边
-        let actualFabricWidth = fabricWidthValue + edgeFinishingValue
-        
-        guard let fabricShrinkageValue = Double(fabricShrinkage), fabricShrinkageValue >= 0 else {
-            alertMessage = "请输入有效的织缩。"
-            return false
-        }
-
-        guard let weftDensityValue = Double(weftDensity), weftDensityValue >= 0 else {
-            alertMessage = "请输入有效的下机纬密。"
-            return false
-        }
-
-        guard let machineSpeedValue = Double(machineSpeed), machineSpeedValue >= 0 else {
-            alertMessage = "请输入有效的车速。"
-            return false
-        }
-
-        guard let efficiencyValue = Double(efficiency), efficiencyValue >= 0 else {
-            alertMessage = "请输入有效的效率。"
-            return false
-        }
-        
-        guard let laborCostValue = Double(dailyLaborCost), laborCostValue >= 0 else {
-            alertMessage = "请输入有效的日工费。"
-            return false
-        }
-
-        guard let fixedCostValue = Double(fixedCost), fixedCostValue >= 0 else {
-            alertMessage = "请输入有效的牵经费用。"
-            return false
-        }
-        
-        calculationResults.perMaterialResults = []
-        
-        for material in materials {
-            
-            let materialwarpratio = (material.warpRatio ?? material.ratio).isEmpty ? "0" : (material.warpRatio ?? material.ratio)
-            print(materialwarpratio)
-            guard let materialWarpRatio = Double(materialwarpratio), materialWarpRatio >= 0 else {
-                alertMessage = "请输入有效的经纱\(material.name)比例（大于等于零）。"
-                return false
+        // Handle direct weight calculations
+        if useDirectWarpWeight && useDirectWeftWeight {
+            // Both weights are directly provided
+            guard let directWarpWeightValue = Double(directWarpWeight),
+                  let directWeftWeightValue = Double(directWeftWeight) else {
+                return .failure(.materialCalculationFailed("直接输入的重量值无效。"))
             }
             
-            let materialweftratio = (material.weftRatio ?? material.ratio).isEmpty ? "0" : (material.weftRatio ?? material.ratio)
-            guard let materialWeftRatio = Double(materialweftratio), materialWeftRatio >= 0 else {
-                alertMessage = "请输入有效的纬纱\(material.name)比例（大于等于零）。"
-                return false
+            totalWarpWeight = directWarpWeightValue
+            totalWeftWeight = directWeftWeightValue
+            
+            // Calculate costs based on direct weights
+            let totalWarpRatio = materials.compactMap { Double($0.warpRatio ?? $0.ratio) }.reduce(0, +)
+            let totalWeftRatio = materials.compactMap { Double($0.weftRatio ?? $0.ratio) }.reduce(0, +)
+            
+            for material in materials {
+                let materialWarpRatio = Double(material.warpRatio ?? material.ratio) ?? 0
+                let materialWeftRatio = Double(material.weftRatio ?? material.ratio) ?? 0
+                let warpYarnPriceValue = Double(material.warpYarnPrice) ?? 0
+                let weftYarnPriceValue = Double(material.weftYarnPrice) ?? 0
+                
+                let materialWarpWeight = directWarpWeightValue * (materialWarpRatio / totalWarpRatio)
+                let materialWeftWeight = directWeftWeightValue * (materialWeftRatio / totalWeftRatio)
+                
+                let warpCost = (materialWarpWeight * warpYarnPriceValue) / 1000
+                let weftCost = (materialWeftWeight * weftYarnPriceValue) / 1000
+                
+                totalWarpCost += warpCost
+                totalWeftCost += weftCost
+                
+                let materialResult = MaterialCalculationResult(
+                    material: material,
+                    warpWeight: materialWarpWeight,
+                    weftWeight: materialWeftWeight,
+                    warpCost: warpCost,
+                    weftCost: weftCost
+                )
+                perMaterialResults.append(materialResult)
             }
+        } else {
+            // Standard calculation or partial direct weight
+            let totalWarpRatio = materials.compactMap { Double($0.warpRatio ?? $0.ratio) }.reduce(0, +)
+            let totalWeftRatio = materials.compactMap { Double($0.weftRatio ?? $0.ratio) }.reduce(0, +)
             
-            let warpyarnvaluenumber = material.warpYarnValue.isEmpty ? "0" : material.warpYarnValue
-            guard let warpYarnValueNumber = Double(warpyarnvaluenumber), warpYarnValueNumber >= 0 else {
-                alertMessage = "请输入有效的\(material.name)\(material.warpYarnTypeSelection.rawValue)。"
-                return false
+            for material in materials {
+                // Validate material
+                let materialValidation = InputValidator.validateMaterial(material)
+                if case .failure(let message) = materialValidation {
+                    return .failure(.materialValidationFailed(message))
+                }
+                
+                guard let materialResult = calculateSingleMaterialCost(
+                    material: material,
+                    validatedValues: validatedValues,
+                    constants: constants,
+                    totalWarpRatio: totalWarpRatio,
+                    totalWeftRatio: totalWeftRatio,
+                    useDirectWarpWeight: useDirectWarpWeight,
+                    directWarpWeight: directWarpWeight,
+                    useDirectWeftWeight: useDirectWeftWeight,
+                    directWeftWeight: directWeftWeight
+                ) else {
+                    return .failure(.materialCalculationFailed("材料\(material.name)计算失败。"))
+                }
+                
+                totalWarpWeight += materialResult.warpWeight
+                totalWeftWeight += materialResult.weftWeight
+                totalWarpCost += materialResult.warpCost
+                totalWeftCost += materialResult.weftCost
+                perMaterialResults.append(materialResult)
             }
-            
-            let weftyarnvaluenumber = material.weftYarnValue.isEmpty ? "0" : material.weftYarnValue
-            guard let weftYarnValueNumber = Double(weftyarnvaluenumber), weftYarnValueNumber >= 0 else {
-                alertMessage = "请输入有效的\(material.name)\(material.weftYarnTypeSelection.rawValue)。"
-                return false
-            }
-            
-            let warpyarnpricevalue = material.warpYarnPrice.isEmpty ? "0" : material.warpYarnPrice
-            guard let warpYarnPriceValue = Double(warpyarnpricevalue), warpYarnPriceValue >= 0 else {
-                alertMessage = "请输入有效的\(material.name)经纱纱价。"
-                return false
-            }
-            
-            let weftyarnpricevalue = material.weftYarnPrice.isEmpty ? "0" : material.weftYarnPrice
-            guard let weftYarnPriceValue = Double(weftyarnpricevalue), weftYarnPriceValue >= 0 else {
-                alertMessage = "请输入有效的\(material.name)纬纱纱价。"
-                return false
-            }
-            
-            let warpDValue: Double
-            let weftDValue: Double
-            if material.warpYarnTypeSelection == .dNumber {
-                warpDValue = warpYarnValueNumber
-            } else {
-                warpDValue = constants.defaultDValue / warpYarnValueNumber
-            }
-            
-            if material.weftYarnTypeSelection == .dNumber {
-                weftDValue = weftYarnValueNumber
-            } else {
-                weftDValue = constants.defaultDValue / weftYarnValueNumber
-            }
-            
-            let warpRatioFraction = materialWarpRatio / totalWarpRatio
-            
-            let weftRatioFraction = materialWeftRatio / totalWeftRatio
-
-            // Warp calculations for this material
-            let warpEnds = boxNumberValue * threadingValue * actualFabricWidth
-            let warpWeight = (warpEnds * warpDValue * fabricShrinkageValue) / constants.warpDivider * warpRatioFraction
-            let warpCost = (warpWeight * warpYarnPriceValue) / 1000
-            // Weft calculations for this material
-            let weftWeight = (weftDValue * actualFabricWidth * weftDensityValue) / constants.weftDivider * weftRatioFraction
-            let weftCost = (weftWeight * weftYarnPriceValue) / 1000
-            // Accumulate totals
-            totalWarpWeight += warpWeight
-            totalWeftWeight += weftWeight
-            totalWarpCost += warpCost
-            totalWeftCost += weftCost
-            // Create and store per-material result
-            let materialResult = MaterialCalculationResult(
-                material: material,
-                warpWeight: warpWeight,
-                weftWeight: weftWeight,
-                warpCost: warpCost,
-                weftCost: weftCost
-            )
-            calculationResults.perMaterialResults.append(materialResult)
-            
         }
-
-        calculationResults.warpWeight = totalWarpWeight
-        calculationResults.weftWeight = totalWeftWeight
-        calculationResults.warpCost = totalWarpCost
-        calculationResults.weftCost = totalWeftCost
-
         
+        return .success(MaterialCalculationResults(
+            totalWarpWeight: totalWarpWeight,
+            totalWeftWeight: totalWeftWeight,
+            totalWarpCost: totalWarpCost,
+            totalWeftCost: totalWeftCost,
+            perMaterialResults: perMaterialResults
+        ))
+    }
+    
+    private static func calculateSingleMaterialCost(
+        material: Material,
+        validatedValues: ValidatedValues,
+        constants: CalculationConstants,
+        totalWarpRatio: Double,
+        totalWeftRatio: Double,
+        useDirectWarpWeight: Bool = false,
+        directWarpWeight: String = "",
+        useDirectWeftWeight: Bool = false,
+        directWeftWeight: String = ""
+    ) -> MaterialCalculationResult? {
         
-        // 3. Warping cost
-        calculationResults.warpingCost = fixedCostValue
-        // 4. Labor cost calculation
-        let dailyProduct = (machineSpeedValue * (efficiencyValue / 100) * constants.minutesPerDay) / (weftDensityValue * 100)
+        // Extract material values
+        let materialWarpRatio = Double(material.warpRatio ?? material.ratio) ?? 0
+        let materialWeftRatio = Double(material.weftRatio ?? material.ratio) ?? 0
+        let warpYarnValueNumber = Double(material.warpYarnValue) ?? 0
+        let weftYarnValueNumber = Double(material.weftYarnValue) ?? 0
+        let warpYarnPriceValue = Double(material.warpYarnPrice) ?? 0
+        let weftYarnPriceValue = Double(material.weftYarnPrice) ?? 0
+        
+        // Calculate D values
+        let warpDValue = calculateDValue(
+            yarnValue: warpYarnValueNumber,
+            yarnType: material.warpYarnTypeSelection,
+            defaultDValue: constants.defaultDValue
+        )
+        let weftDValue = calculateDValue(
+            yarnValue: weftYarnValueNumber,
+            yarnType: material.weftYarnTypeSelection,
+            defaultDValue: constants.defaultDValue
+        )
+        
+        // Calculate ratio fractions
+        let warpRatioFraction = materialWarpRatio / totalWarpRatio
+        let weftRatioFraction = materialWeftRatio / totalWeftRatio
+        
+        // Warp calculations
+        let warpWeight: Double
+        if useDirectWarpWeight, let directWarpWeightValue = Double(directWarpWeight) {
+            warpWeight = directWarpWeightValue * warpRatioFraction
+        } else {
+            let warpEnds = validatedValues.boxNumber * validatedValues.threading * validatedValues.actualFabricWidth
+            warpWeight = (warpEnds * warpDValue * validatedValues.fabricShrinkage) / constants.warpDivider * warpRatioFraction
+        }
+        let warpCost = (warpWeight * warpYarnPriceValue) / 1000
+        
+        // Weft calculations
+        let weftWeight: Double
+        if useDirectWeftWeight, let directWeftWeightValue = Double(directWeftWeight) {
+            weftWeight = directWeftWeightValue * weftRatioFraction
+        } else {
+            weftWeight = (weftDValue * validatedValues.actualFabricWidth * validatedValues.weftDensity) / constants.weftDivider * weftRatioFraction
+        }
+        let weftCost = (weftWeight * weftYarnPriceValue) / 1000
+        
+        return MaterialCalculationResult(
+            material: material,
+            warpWeight: warpWeight,
+            weftWeight: weftWeight,
+            warpCost: warpCost,
+            weftCost: weftCost
+        )
+    }
+    
+    private static func calculateDValue(yarnValue: Double, yarnType: YarnType, defaultDValue: Double) -> Double {
+        return yarnType == .dNumber ? yarnValue : defaultDValue / yarnValue
+    }
+    
+    private static func updateCalculationResults(
+        calculationResults: CalculationResults,
+        materialResults: MaterialCalculationResults,
+        validatedValues: ValidatedValues,
+        constants: CalculationConstants
+    ) {
+        // Update material results
+        calculationResults.perMaterialResults = materialResults.perMaterialResults
+        calculationResults.warpWeight = materialResults.totalWarpWeight
+        calculationResults.weftWeight = materialResults.totalWeftWeight
+        calculationResults.warpCost = materialResults.totalWarpCost
+        calculationResults.weftCost = materialResults.totalWeftCost
+        
+        // Update warping cost
+        calculationResults.warpingCost = validatedValues.fixedCost
+        
+        // Calculate labor cost
+        let dailyProduct = (validatedValues.machineSpeed * (validatedValues.efficiency / 100) * constants.minutesPerDay) / (validatedValues.weftDensity * 100)
         calculationResults.dailyProduct = dailyProduct
-        let laborValue = laborCostValue / dailyProduct
-        calculationResults.laborCost = laborValue
-        // 5. Total cost
+        calculationResults.laborCost = validatedValues.dailyLaborCost / dailyProduct
+        
+        // Calculate total cost
         calculationResults.totalCost = calculationResults.warpCost + calculationResults.weftCost + calculationResults.warpingCost + calculationResults.laborCost
-
-        // Calculation successful
-        return true
     }
 }
 

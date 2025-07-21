@@ -91,13 +91,30 @@ struct HistoryView: View {
                 } else {
                     ForEach(filteredRecords) { record in
                         NavigationLink(destination: CalculationDetailView(record: record)) {
-                            VStack(alignment: .leading) {
-                                Text("客户/单号：\(record.customerName!)")
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("客户/单号：\(record.customerName ?? "未知")")
                                     .font(.headline)
-                                Text("计算于 \(record.date!, formatter: dateFormatter)")
+                                if let date = record.date {
+                                    Text("计算于 \(date, formatter: dateFormatter)")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                // Show material info for single material records
+                                if isSingleMaterialRecord(record) {
+                                    if let warpYarnValue = record.warpYarnValue,
+                                       let warpYarnType = record.warpYarnTypeSelection,
+                                       let weftYarnValue = record.weftYarnValue,
+                                       let weftYarnType = record.weftYarnTypeSelection {
+                                        Text("经纱: \(warpYarnValue) \(warpYarnType) • 纬纱: \(weftYarnValue) \(weftYarnType)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                
+                                Text("总费用：\(record.totalCost, specifier: "%.2f") 元/米")
                                     .font(.subheadline)
-                                Text("总费用：\(record.totalCost, specifier: "%.2f") 元")
-                                    .font(.subheadline)
+                                    .foregroundColor(.primary)
                             }
                         }
                     }
@@ -160,5 +177,21 @@ struct HistoryView: View {
         }
         
         return searchIndex == searchText.endIndex
+    }
+    
+    // Helper function to determine if a record is from single material calculation
+    private func isSingleMaterialRecord(_ record: CalculationRecord) -> Bool {
+        // Check if it has materialsResult data
+        if let data = record.materialsResult {
+            if let results = try? JSONDecoder().decode([MaterialCalculationResult].self, from: data) {
+                return results.count == 1 && results.first?.material.name == "单材料"
+            }
+        }
+        // For legacy records without materialsResult, check if basic yarn data exists
+        // Only return true if we have all required yarn information
+        return record.warpYarnValue != nil && 
+               record.weftYarnValue != nil && 
+               record.warpYarnTypeSelection != nil && 
+               record.weftYarnTypeSelection != nil
     }
 }

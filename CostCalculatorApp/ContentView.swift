@@ -16,6 +16,7 @@ enum Tab: String, CaseIterable {
 
 struct ContentView: View {
     @State private var selectedTab: Tab = .home
+    @ObservedObject private var languageManager = LanguageManager.shared
     
     var body: some View {
         VStack {
@@ -38,11 +39,13 @@ struct ContentView: View {
             BottomNavigationBar(selectedTab: $selectedTab)
         }
         .edgesIgnoringSafeArea(.bottom)
+        .id(languageManager.currentLanguage.rawValue)
     }
 }
 
 struct BottomNavigationBar: View {
     @Binding var selectedTab: Tab
+    @ObservedObject private var languageManager = LanguageManager.shared
     
     var body: some View {
         HStack {
@@ -69,27 +72,21 @@ struct BottomNavigationBar: View {
         .background(Color(UIColor.systemBackground))
         .clipShape(Capsule())
         .shadow(radius: 10)
+        .id(languageManager.currentLanguage.rawValue)
     }
     
     private func tabLabel(for tab: Tab) -> String {
         switch tab {
-        case .home: return "费用计算"
-        case .chat: return "织梦·雅集"
-        case .statistic: return "统计"
-        case .setting: return "设置"
+        case .home: return "tab_home".localized()
+        case .chat: return "tab_chat".localized()
+        case .statistic: return "tab_statistics".localized()
+        case .setting: return "tab_settings".localized()
         }
     }
 }
 
 
 
-struct ProfileView: View {
-    var body: some View {
-        Text("设置")
-            .font(.largeTitle)
-            .foregroundColor(.gray)
-    }
-}
 
 
 

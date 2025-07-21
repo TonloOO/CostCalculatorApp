@@ -28,6 +28,14 @@ struct EditCalculationView: View {
     @State private var efficiency: String
     @State private var dailyLaborCost: String
     @State private var fixedCost: String
+    @State private var useDirectWarpWeight: Bool
+    @State private var directWarpWeight: String
+    @State private var useDirectWeftWeight: Bool
+    @State private var directWeftWeight: String
+    
+    // For single material yarn type selection
+    @State private var showWarpPicker = false
+    @State private var showWeftPicker = false
     
     @State private var defaultDValue: Double
     @State private var minutesPerDay: Double
@@ -57,6 +65,10 @@ struct EditCalculationView: View {
         _efficiency = State(initialValue: record.efficiency ?? "")
         _dailyLaborCost = State(initialValue: record.dailyLaborCost ?? "")
         _fixedCost = State(initialValue: record.fixedCost ?? "")
+        _useDirectWarpWeight = State(initialValue: record.useDirectWarpWeight)
+        _directWarpWeight = State(initialValue: record.directWarpWeight ?? "")
+        _useDirectWeftWeight = State(initialValue: record.useDirectWeftWeight)
+        _directWeftWeight = State(initialValue: record.directWeftWeight ?? "")
 
         // Constants
         _defaultDValue = State(initialValue: record.defaultDValue)
@@ -86,36 +98,86 @@ struct EditCalculationView: View {
     var body: some View {
         Form {
             Section(header: Text("客户信息")) {
-                SuffixTextField(label: "客户名称/ID", text: $customerName, suffix: "")
+                SuffixTextField(label: "客户名称/单号", text: $customerName, suffix: "")
+            }
+            
+            Section(header: Text("直接输入重量")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Toggle("直接输入经纱重量", isOn: $useDirectWarpWeight)
+                            .toggleStyle(SwitchToggleStyle())
+                    }
+                    
+                    if useDirectWarpWeight {
+                        SuffixTextField(label: "经纱重量", text: $directWarpWeight, suffix: "g/m", keyboardType: .decimalPad)
+                    }
+                    
+                    HStack {
+                        Toggle("直接输入纬纱重量", isOn: $useDirectWeftWeight)
+                            .toggleStyle(SwitchToggleStyle())
+                    }
+                    
+                    if useDirectWeftWeight {
+                        SuffixTextField(label: "纬纱重量", text: $directWeftWeight, suffix: "g/m", keyboardType: .decimalPad)
+                    }
+                }
             }
 
-            Section(header: HStack {
-                Text("材料列表")
-                Spacer()
-                Button(action: {
-                    HapticFeedbackManager.shared.impact(style: .medium)
-                    materials.append(Material(name: "材料" + String(materials.count + 1), warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: "1", weftRatio: "1", ratio: "1"))
+            // Show single material input fields if only one material (single material mode)
+            if materials.count == 1 {
+                // Single material mode - show fields directly like in creation view
+                EmptyView()
+            } else {
+                // Multi-material mode - show material list
+                Section(header: HStack {
+                    Text("材料列表")
+                    Spacer()
+                    Button(action: {
+                        HapticFeedbackManager.shared.impact(style: .medium)
+                        materials.append(Material(name: "材料" + String(materials.count + 1), warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: "1", weftRatio: "1", ratio: "1"))
+                    }) {
+                        Image(systemName: "plus")
+                    }
                 }) {
-                    Image(systemName: "plus")
+                    ForEach($materials) { material in
+                        MaterialRow(material: material, materialsBinding: $materials)
+                    }
+                    .onDelete(perform: deleteMaterials)
                 }
-            }) {
-                ForEach($materials) { material in
-                    MaterialRow(material: material, materialsBinding: $materials)
-                }
-                .onDelete(perform: deleteMaterials)
             }
             
             Section(header: Text("输入参数")) {
-                SuffixTextField(label: "筘号", text: $boxNumber, suffix: "", keyboardType: .decimalPad)
-                SuffixTextField(label: "穿入", text: $threading, suffix: "", keyboardType: .decimalPad)
-                SuffixTextField(label: "门幅", text: $fabricWidth, suffix: "cm", keyboardType: .decimalPad)
-                SuffixTextField(label: "加边", text: $edgeFinishing, suffix: "cm", keyboardType: .decimalPad)
-                SuffixTextField(label: "织缩", text: $fabricShrinkage, suffix: "", keyboardType: .decimalPad)
-                SuffixTextField(label: "下机纬密", text: $weftDensity, suffix: "根/cm", keyboardType: .decimalPad)
-                SuffixTextField(label: "车速", text: $machineSpeed, suffix: "RPM", keyboardType: .decimalPad)
-                SuffixTextField(label: "效率", text: $efficiency, suffix: "%", keyboardType: .decimalPad)
-                SuffixTextField(label: "日工费", text: $dailyLaborCost, suffix: "元", keyboardType: .decimalPad)
-                SuffixTextField(label: "牵经费用", text: $fixedCost, suffix: "元/米", keyboardType: .decimalPad)
+                Group {
+                    if !useDirectWarpWeight {
+                        SuffixTextField(label: "筘号", text: $boxNumber, suffix: "", keyboardType: .decimalPad)
+                        SuffixTextField(label: "穿入", text: $threading, suffix: "", keyboardType: .decimalPad)
+                        SuffixTextField(label: "门幅", text: $fabricWidth, suffix: "cm", keyboardType: .decimalPad)
+                        SuffixTextField(label: "加边", text: $edgeFinishing, suffix: "cm", keyboardType: .decimalPad)
+                        SuffixTextField(label: "织缩", text: $fabricShrinkage, suffix: "", keyboardType: .decimalPad)
+                    } else {
+                        if !useDirectWeftWeight {
+                            SuffixTextField(label: "门幅", text: $fabricWidth, suffix: "cm", keyboardType: .decimalPad)
+                            SuffixTextField(label: "加边", text: $edgeFinishing, suffix: "cm", keyboardType: .decimalPad)
+                        }
+                    }
+                    
+                    // Add yarn fields for single material mode
+                    if materials.count == 1 {
+                        YarnInputField(yarnValue: $materials[0].warpYarnValue, yarnTypeSelection: $materials[0].warpYarnTypeSelection, showPicker: $showWarpPicker, label: "经纱")
+                        YarnInputField(yarnValue: $materials[0].weftYarnValue, yarnTypeSelection: $materials[0].weftYarnTypeSelection, showPicker: $showWeftPicker, label: "纬纱")
+                        SuffixTextField(label: "经纱纱价", text: $materials[0].warpYarnPrice, suffix: "元", keyboardType: .decimalPad)
+                        SuffixTextField(label: "纬纱纱价", text: $materials[0].weftYarnPrice, suffix: "元", keyboardType: .decimalPad)
+                    }
+                    
+                    if !useDirectWeftWeight {
+                        SuffixTextField(label: "下机纬密", text: $weftDensity, suffix: "根/cm", keyboardType: .decimalPad)
+                    }
+                    
+                    SuffixTextField(label: "车速", text: $machineSpeed, suffix: "RPM", keyboardType: .decimalPad)
+                    SuffixTextField(label: "效率", text: $efficiency, suffix: "%", keyboardType: .decimalPad)
+                    SuffixTextField(label: "日工费", text: $dailyLaborCost, suffix: "元", keyboardType: .decimalPad)
+                    SuffixTextField(label: "牵经费用", text: $fixedCost, suffix: "元/米", keyboardType: .decimalPad)
+                }
             }
 
             Section {
@@ -137,7 +199,10 @@ struct EditCalculationView: View {
     }
     
     private func deleteMaterials(at offsets: IndexSet) {
-        materials.remove(atOffsets: offsets)
+        // Don't allow deletion if it would leave no materials
+        if materials.count > 1 {
+            materials.remove(atOffsets: offsets)
+        }
     }
     
     func updateCalculation() {
@@ -163,6 +228,10 @@ struct EditCalculationView: View {
             materials: materials,
             constants: constants,
             calculationResults: calculationResults,
+            useDirectWarpWeight: useDirectWarpWeight,
+            directWarpWeight: directWarpWeight,
+            useDirectWeftWeight: useDirectWeftWeight,
+            directWeftWeight: directWeftWeight,
             alertMessage: &alertMessage
         )
 
@@ -180,6 +249,10 @@ struct EditCalculationView: View {
             record.efficiency = efficiency
             record.dailyLaborCost = dailyLaborCost
             record.fixedCost = fixedCost
+            record.useDirectWarpWeight = useDirectWarpWeight
+            record.directWarpWeight = directWarpWeight
+            record.useDirectWeftWeight = useDirectWeftWeight
+            record.directWeftWeight = directWeftWeight
 
             // constants
             record.defaultDValue = constants.defaultDValue

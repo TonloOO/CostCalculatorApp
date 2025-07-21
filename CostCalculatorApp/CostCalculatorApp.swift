@@ -11,6 +11,11 @@ import CoreData
 @main
 struct CostCalculatorApp: App {
     let persistenceController = PersistenceController.shared
+    
+    init() {
+        // Initialize language manager on app startup
+        _ = LanguageManager.shared
+    }
 
     var body: some Scene {
         WindowGroup {

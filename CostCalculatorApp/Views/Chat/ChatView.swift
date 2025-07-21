@@ -18,6 +18,7 @@ struct ChatView: View {
     @State private var conversationHistory: [Conversation] = []
     @State private var selectedConversationID: String?
     @FocusState private var isInputActive: Bool
+    @State private var scrollViewID = UUID()
 
     var lastMessageText: String {
         messages.last?.text ?? ""
@@ -58,34 +59,21 @@ struct ChatView: View {
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 10) {
+                    LazyVStack(alignment: .leading, spacing: 10) {
                         ForEach(messages) { message in
-                            HStack {
-                                if message.isUser {
-                                    Spacer()
-                                    Text(message.text)
-                                        .padding()
-                                        .background(Color.blue.opacity(0.7))
-                                        .foregroundColor(.white)
-                                        .cornerRadius(10)
-                                        .frame(maxWidth: 250, alignment: .trailing)
-                                } else {
-                                    Markdown(message.text)
-                                        .padding()
-                                        .background(Color.gray.opacity(0.2))
-                                        .cornerRadius(10)
-                                        .frame(maxWidth: 350, alignment: .leading)
-                                    Spacer()
-                                }
-                            }
+                            MessageRowView(message: message)
+                                .id(message.id)
                         }
                     }
                     .padding()
                 }
                 .onChange(of: lastMessageText) {
-                    if let lastMessage = messages.last {
-                        withAnimation {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                    // Use debounced scroll to improve performance
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        if let lastMessage = messages.last {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
                         }
                     }
                 }
@@ -232,6 +220,32 @@ struct ChatView: View {
                     print("Failed to delete conversation")
                 }
             }
+    }
+}
+
+// MARK: - MessageRowView for optimized rendering
+struct MessageRowView: View {
+    let message: Message
+    
+    var body: some View {
+        HStack {
+            if message.isUser {
+                Spacer()
+                Text(message.text)
+                    .padding()
+                    .background(Color.blue.opacity(0.7))
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                    .frame(maxWidth: 250, alignment: .trailing)
+            } else {
+                Markdown(message.text)
+                    .padding()
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(10)
+                    .frame(maxWidth: 350, alignment: .leading)
+                Spacer()
+            }
+        }
     }
 }
 

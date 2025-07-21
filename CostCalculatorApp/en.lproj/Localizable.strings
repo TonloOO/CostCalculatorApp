@@ -1,0 +1,59 @@
+/* Settings Tab */
+"settings" = "Settings";
+"app_settings" = "App Settings";
+"app_settings_subtitle" = "Notifications, Theme, etc.";
+"about_app" = "About App";
+"about_app_subtitle" = "Version Info, Help";
+"data_sync" = "Data Sync";
+"feedback" = "Feedback";
+"feedback_subtitle" = "Contact Developer";
+"done" = "Done";
+
+/* Language Settings */
+"language_settings" = "Language Settings";
+"language" = "Language";
+"language_subtitle" = "Select App Language";
+"chinese" = "中文";
+"english" = "English";
+"restart_required" = "Restart Required";
+"restart_message" = "Language settings have been changed. Please restart the app for changes to take effect.";
+"ok" = "OK";
+
+/* About View */
+"cost_calculator" = "Cost Calculator";
+"version" = "Version 1.3.0";
+"features" = "Features:";
+"feature_cost_calculation" = "• Textile Cost Calculation";
+"feature_multi_material" = "• Multi-Material Support";
+"feature_cloud_sync" = "• Cloud Data Sync";
+"feature_history" = "• History Management";
+"copyright" = "© 2024 Zishuo Li";
+"about" = "About";
+
+/* CloudKit Settings */
+"icloud_sync" = "iCloud Data Sync";
+"icloud_status" = "iCloud Status";
+"enable_icloud" = "Enable iCloud Sync";
+"icloud_description" = "Sync calculation data across all devices";
+"explanation" = "Notes";
+"icloud_note1" = "• When enabled, your calculation records will sync in iCloud";
+"icloud_note2" = "• Accessible on all devices logged into the same iCloud account";
+"icloud_note3" = "• Settings changes require app restart to take effect";
+"icloud_unavailable" = "iCloud Unavailable";
+"icloud_login_required" = "Please log into your iCloud account in device settings to use this feature";
+"open_settings" = "Open Settings";
+
+/* Tab Labels */
+"tab_home" = "Cost Calculator";
+"tab_chat" = "Weaving Dreams";
+"tab_statistics" = "Statistics";
+"tab_settings" = "Settings";
+
+/* CloudKit Status */
+"cloudkit_available" = "Available";
+"cloudkit_unavailable" = "Unavailable";
+"cloudkit_syncing" = "Syncing";
+"cloudkit_error" = "Sync Error";
+
+/* General */
+"settings_under_development" = "Settings feature under development...";
