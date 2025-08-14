@@ -56,8 +56,9 @@ struct InputValidator {
     
     // MARK: - Material Validation
     static func validateMaterialRatios(_ materials: [Material]) -> ValidationResult {
-        let totalWarpRatio = materials.compactMap { Double($0.warpRatio ?? $0.ratio) }.reduce(0, +)
-        let totalWeftRatio = materials.compactMap { Double($0.weftRatio ?? $0.ratio) }.reduce(0, +)
+        // Use direction-specific ratios only; if empty or nil, treat as 0 (do not fallback to generic ratio)
+        let totalWarpRatio = materials.map { Double($0.warpRatio ?? "0") ?? 0 }.reduce(0, +)
+        let totalWeftRatio = materials.map { Double($0.weftRatio ?? "0") ?? 0 }.reduce(0, +)
         
         if totalWarpRatio == 0 || totalWeftRatio == 0 {
             return .failure("材料比例之和不能为零。")
@@ -149,11 +150,10 @@ struct InputValidator {
             }
         }
         
-        // Add weft-related validations if not using direct weight
-        if !useDirectWeftWeight {
-            validations.append((weftDensity, "下机纬密"))
-        } else {
-            // Validate direct weft weight
+        // Weft density is always required (daily product depends on it), even when using direct weft weight
+        validations.append((weftDensity, "下机纬密"))
+        if useDirectWeftWeight {
+            // Validate direct weft weight additionally
             let weftWeightResult = validatePositiveNumber(directWeftWeight, fieldName: "纬纱重量")
             if case .failure(let message) = weftWeightResult {
                 return .failure(message)
@@ -177,7 +177,7 @@ struct InputValidator {
     ) -> ValidationResult {
         // Validate warp ratio
         let warpRatioResult = validateRatio(
-            material.warpRatio ?? material.ratio,
+            material.warpRatio ?? "0",
             materialName: material.name,
             ratioType: "经纱"
         )
@@ -187,7 +187,7 @@ struct InputValidator {
         
         // Validate weft ratio
         let weftRatioResult = validateRatio(
-            material.weftRatio ?? material.ratio,
+            material.weftRatio ?? "0",
             materialName: material.name,
             ratioType: "纬纱"
         )
@@ -205,6 +205,12 @@ struct InputValidator {
             if case .failure(let message) = warpYarnResult {
                 return .failure(message)
             }
+            // When using yarn count, value must be strictly greater than 0 to avoid division by zero
+            if material.warpYarnTypeSelection == .yarnCount {
+                guard let value = Double(material.warpYarnValue), value > 0 else {
+                    return .failure("请输入有效的\(material.name)支数（大于零）。")
+                }
+            }
         }
         
         // Validate weft yarn values only if not using direct weft weight
@@ -216,6 +222,12 @@ struct InputValidator {
             )
             if case .failure(let message) = weftYarnResult {
                 return .failure(message)
+            }
+            // When using yarn count, value must be strictly greater than 0 to avoid division by zero
+            if material.weftYarnTypeSelection == .yarnCount {
+                guard let value = Double(material.weftYarnValue), value > 0 else {
+                    return .failure("请输入有效的\(material.name)支数（大于零）。")
+                }
             }
         }
         

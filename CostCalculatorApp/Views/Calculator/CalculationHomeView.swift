@@ -8,76 +8,118 @@
 import SwiftUI
 
 struct CalculationHomeView: View {
+    @State private var showingHistory = false
+    
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    NavigationLink(destination: CostCalculatorView()) {
-                        ZStack {
-                            GeometryReader { geometry in
-                                Image("star")
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: geometry.size.width, height: 180)
-                                    .clipped()
-                                    .cornerRadius(10)
-                            }
-                            .frame(height: 180)
-                            Text("单材料纱价费用计算")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .shadow(radius: 5)
+        NavigationStack {
+            ZStack {
+                // Background
+                AppTheme.Colors.groupedBackground
+                    .ignoresSafeArea()
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: AppTheme.Spacing.large) {
+                        // Header
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
+                            Text("费用计算")
+                                .font(AppTheme.Typography.largeTitle)
+                                .foregroundColor(AppTheme.Colors.primaryText)
+                            
+                            Text("选择计算模式开始")
+                                .font(AppTheme.Typography.subheadline)
+                                .foregroundColor(AppTheme.Colors.secondaryText)
                         }
-                        .padding(.horizontal, 20)
-                    }
-                    
-                    NavigationLink(destination: CostCalculatorViewWithMaterial()) {
-                        ZStack {
-                            GeometryReader { geometry in
-                                Image("sky")
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: geometry.size.width, height: 180)
-                                    .clipped()
-                                    .cornerRadius(10)
-                            }
-                            .frame(height: 180)
-                            Text("多材料纱价费用计算")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .shadow(radius: 5)
-                        }
-                        .padding(.horizontal, 20)
-                    }
-                    
-                    NavigationLink(destination: HistoryView()) {
-                        ZStack {
-                            GeometryReader { geometry in
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.blue, Color.purple]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, AppTheme.Spacing.large)
+                        .padding(.top, AppTheme.Spacing.large)
+                        
+                        // Feature Cards
+                        VStack(spacing: AppTheme.Spacing.medium) {
+                            NavigationLink(destination: CostCalculatorView()) {
+                                FeatureCard(
+                                    title: "单材料纱价计算",
+                                    subtitle: "快速计算单一材料成本",
+                                    icon: "doc.text.magnifyingglass",
+                                    gradient: AppTheme.Colors.cardGradient1,
+                                    action: {}
                                 )
-                                .frame(width: geometry.size.width, height: 180)
-                                .cornerRadius(10)
+                                .contentShape(Rectangle())
                             }
-                            .frame(height: 180)
-                            Text("历史记录")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .shadow(radius: 5)
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            NavigationLink(destination: CostCalculatorViewWithMaterial()) {
+                                FeatureCard(
+                                    title: "多材料纱价计算",
+                                    subtitle: "支持多种材料组合计算",
+                                    icon: "doc.on.doc",
+                                    gradient: AppTheme.Colors.cardGradient2,
+                                    action: {}
+                                )
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            Button(action: {
+                                showingHistory = true
+                            }) {
+                                FeatureCard(
+                                    title: "历史记录",
+                                    subtitle: "查看所有计算记录",
+                                    icon: "clock.arrow.circlepath",
+                                    gradient: AppTheme.Colors.cardGradient3,
+                                    action: {}
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, AppTheme.Spacing.large)
                     }
+                    .padding(.bottom, 100)
                 }
-                .padding(.top, 20)
-                .padding(.bottom, 10)
             }
-            .navigationTitle("费用计算")
+            .navigationBarHidden(true)
+            .sheet(isPresented: $showingHistory) {
+                NavigationView {
+                    HistoryView()
+                        .navigationBarItems(trailing: Button("关闭") {
+                            showingHistory = false
+                        })
+                }
+            }
         }
+    }
+}
+
+// MARK: - Quick Stat Card
+struct QuickStatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
+                Text(title)
+                    .font(AppTheme.Typography.caption1)
+                    .foregroundColor(AppTheme.Colors.secondaryText)
+                
+                Text(value)
+                    .font(AppTheme.Typography.title2)
+                    .foregroundColor(AppTheme.Colors.primaryText)
+            }
+            
+            Spacer()
+            
+            Image(systemName: icon)
+                .font(.system(size: 24))
+                .foregroundColor(color)
+        }
+        .padding(AppTheme.Spacing.medium)
+        .frame(maxWidth: .infinity)
+        .background(AppTheme.Colors.background)
+        .cornerRadius(AppTheme.CornerRadius.medium)
+        .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
     }
 }
 

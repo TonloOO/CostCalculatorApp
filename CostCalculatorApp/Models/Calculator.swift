@@ -212,12 +212,11 @@ struct Calculator {
         }
         
         // Weft-related values (only needed if not using direct weft weight)
-        if !useDirectWeftWeight {
-            guard let weftDensityNum = Double(weftDensity.isEmpty ? "0" : weftDensity) else {
-                return nil
-            }
-            weftDensityValue = weftDensityNum
+        // Weft density is always required (even when using direct weft weight) for daily production/labor cost
+        guard let weftDensityNum = Double(weftDensity.isEmpty ? "0" : weftDensity) else {
+            return nil
         }
+        weftDensityValue = weftDensityNum
         
         return ValidatedValues(
             boxNumber: boxNumberValue,
@@ -262,12 +261,22 @@ struct Calculator {
             totalWeftWeight = directWeftWeightValue
             
             // Calculate costs based on direct weights
-            let totalWarpRatio = materials.compactMap { Double($0.warpRatio ?? $0.ratio) }.reduce(0, +)
-            let totalWeftRatio = materials.compactMap { Double($0.weftRatio ?? $0.ratio) }.reduce(0, +)
+            // Direction-specific totals only (no fallback to generic ratio)
+            let totalWarpRatio = materials.map { Double($0.warpRatio ?? "0") ?? 0 }.reduce(0, +)
+            let totalWeftRatio = materials.map { Double($0.weftRatio ?? "0") ?? 0 }.reduce(0, +)
             
             for material in materials {
-                let materialWarpRatio = Double(material.warpRatio ?? material.ratio) ?? 0
-                let materialWeftRatio = Double(material.weftRatio ?? material.ratio) ?? 0
+                // Validate material even when using direct weights, to enforce ratios and prices
+                let materialValidation = InputValidator.validateMaterial(
+                    material,
+                    useDirectWarpWeight: true,
+                    useDirectWeftWeight: true
+                )
+                if case .failure(let message) = materialValidation {
+                    return .failure(.materialValidationFailed(message))
+                }
+                let materialWarpRatio = Double(material.warpRatio ?? "0") ?? 0
+                let materialWeftRatio = Double(material.weftRatio ?? "0") ?? 0
                 let warpYarnPriceValue = Double(material.warpYarnPrice) ?? 0
                 let weftYarnPriceValue = Double(material.weftYarnPrice) ?? 0
                 
@@ -291,8 +300,9 @@ struct Calculator {
             }
         } else {
             // Standard calculation or partial direct weight
-            let totalWarpRatio = materials.compactMap { Double($0.warpRatio ?? $0.ratio) }.reduce(0, +)
-            let totalWeftRatio = materials.compactMap { Double($0.weftRatio ?? $0.ratio) }.reduce(0, +)
+            // Direction-specific totals only (no fallback to generic ratio)
+            let totalWarpRatio = materials.map { Double($0.warpRatio ?? "0") ?? 0 }.reduce(0, +)
+            let totalWeftRatio = materials.map { Double($0.weftRatio ?? "0") ?? 0 }.reduce(0, +)
             
             for material in materials {
                 // Validate material
@@ -349,8 +359,8 @@ struct Calculator {
     ) -> MaterialCalculationResult? {
         
         // Extract material values
-        let materialWarpRatio = Double(material.warpRatio ?? material.ratio) ?? 0
-        let materialWeftRatio = Double(material.weftRatio ?? material.ratio) ?? 0
+        let materialWarpRatio = Double(material.warpRatio ?? "0") ?? 0
+        let materialWeftRatio = Double(material.weftRatio ?? "0") ?? 0
         let warpYarnValueNumber = Double(material.warpYarnValue) ?? 0
         let weftYarnValueNumber = Double(material.weftYarnValue) ?? 0
         let warpYarnPriceValue = Double(material.warpYarnPrice) ?? 0
@@ -401,7 +411,12 @@ struct Calculator {
     }
     
     private static func calculateDValue(yarnValue: Double, yarnType: YarnType, defaultDValue: Double) -> Double {
-        return yarnType == .dNumber ? yarnValue : defaultDValue / yarnValue
+        if yarnType == .dNumber {
+            return yarnValue
+        }
+        // Avoid division by zero when using yarn count
+        guard yarnValue > 0 else { return 0 }
+        return defaultDValue / yarnValue
     }
     
     private static func updateCalculationResults(
@@ -420,10 +435,13 @@ struct Calculator {
         // Update warping cost
         calculationResults.warpingCost = validatedValues.fixedCost
         
-        // Calculate labor cost
-        let dailyProduct = (validatedValues.machineSpeed * (validatedValues.efficiency / 100) * constants.minutesPerDay) / (validatedValues.weftDensity * 100)
+        // Calculate labor cost (safe guards for division by zero / invalid values)
+        let denominator = validatedValues.weftDensity * 100
+        let numerator = (validatedValues.machineSpeed * (validatedValues.efficiency / 100) * constants.minutesPerDay)
+        let rawDailyProduct = denominator != 0 ? (numerator / denominator) : 0
+        let dailyProduct = rawDailyProduct.isFinite && rawDailyProduct > 0 ? rawDailyProduct : 0
         calculationResults.dailyProduct = dailyProduct
-        calculationResults.laborCost = validatedValues.dailyLaborCost / dailyProduct
+        calculationResults.laborCost = dailyProduct > 0 ? (validatedValues.dailyLaborCost / dailyProduct) : 0
         
         // Calculate total cost
         calculationResults.totalCost = calculationResults.warpCost + calculationResults.weftCost + calculationResults.warpingCost + calculationResults.laborCost

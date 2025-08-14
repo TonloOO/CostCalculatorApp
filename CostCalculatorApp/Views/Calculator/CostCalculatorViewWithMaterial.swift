@@ -39,8 +39,8 @@ struct CostCalculatorViewWithMaterial: View {
     
 
     @State private var materials: [Material] = [
-        Material(name: "材料1", warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: "1", weftRatio: "1", ratio: "1"),
-        Material(name: "材料2", warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: "1", weftRatio: "1", ratio: "1")
+        Material(name: "材料1", warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: nil, weftRatio: nil, ratio: "1"),
+        Material(name: "材料2", warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: nil, weftRatio: nil, ratio: "1")
     ]
 
 
@@ -95,7 +95,7 @@ struct CostCalculatorViewWithMaterial: View {
                 Spacer()
                 Button(action: {
                     HapticFeedbackManager.shared.impact(style: .medium)
-                    materials.append(Material(name: "材料" + String(materials.count + 1), warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: "1", weftRatio: "1", ratio: "1"))
+                    materials.append(Material(name: "材料" + String(materials.count + 1), warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: nil, weftRatio: nil, ratio: "1"))
                 }) {
                     Image(systemName: "plus")
                 }

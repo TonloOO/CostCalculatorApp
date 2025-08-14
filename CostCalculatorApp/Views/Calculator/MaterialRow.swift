@@ -55,7 +55,7 @@ struct MaterialRow: View {
                         SuffixTextField(
                             label: "经纱占比",
                             text: Binding(
-                                get: { material.warpRatio ?? material.ratio },
+                                get: { material.warpRatio ?? "" },
                                 set: { material.warpRatio = $0.isEmpty ? nil : $0 }
                             ),
                             suffix: "",
@@ -91,7 +91,7 @@ struct MaterialRow: View {
                         SuffixTextField(
                             label: "纬纱占比",
                             text: Binding(
-                                get: { material.weftRatio ?? material.ratio },
+                                get: { material.weftRatio ?? "" },
                                 set: { material.weftRatio = $0.isEmpty ? nil : $0 }
                             ),
                             suffix: "",
@@ -108,8 +108,8 @@ struct MaterialRow: View {
         )
         .onAppear {
             // Initialize the toggles based on existing data
-            warpExpanded = !material.warpYarnValue.isEmpty || !material.warpYarnPrice.isEmpty
-            weftExpanded = !material.weftYarnValue.isEmpty || !material.weftYarnPrice.isEmpty
+            warpExpanded = !(material.warpYarnValue.isEmpty && material.warpYarnPrice.isEmpty && (material.warpRatio == nil || material.warpRatio?.isEmpty == true))
+            weftExpanded = !(material.weftYarnValue.isEmpty && material.weftYarnPrice.isEmpty && (material.weftRatio == nil || material.weftRatio?.isEmpty == true))
         }
     }
 }

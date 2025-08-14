@@ -159,15 +159,26 @@ struct MaterialDetailView: View {
                 Text("材料名称: \(material.material.name)")
             }
             
-            Text("经纱规格: \(material.material.warpYarnValue) \(material.material.warpYarnTypeSelection.rawValue)")
-            Text("纬纱规格: \(material.material.weftYarnValue) \(material.material.weftYarnTypeSelection.rawValue)")
-            Text("经纱纱价: \(material.material.warpYarnPrice) 元")
-            Text("纬纱纱价: \(material.material.weftYarnPrice) 元")
+            let warpEnabled = ((Double(material.material.warpRatio ?? "0") ?? 0) > 0) || material.warpWeight > 0 || material.warpCost > 0
+            let weftEnabled = ((Double(material.material.weftRatio ?? "0") ?? 0) > 0) || material.weftWeight > 0 || material.weftCost > 0
+
+            if warpEnabled {
+                Text("经纱规格: \(material.material.warpYarnValue) \(material.material.warpYarnTypeSelection.rawValue)")
+                Text("经纱纱价: \(material.material.warpYarnPrice) 元")
+            }
+            if weftEnabled {
+                Text("纬纱规格: \(material.material.weftYarnValue) \(material.material.weftYarnTypeSelection.rawValue)")
+                Text("纬纱纱价: \(material.material.weftYarnPrice) 元")
+            }
             
             // Only show ratios if it's not a single material (ratio would be 1)
             if material.material.name != "单材料" {
-                Text("经纱占比: \(material.material.warpRatio ?? material.material.ratio)")
-                Text("纬纱占比: \(material.material.weftRatio ?? material.material.ratio)")
+                if warpEnabled {
+                    Text("经纱占比: \(material.material.warpRatio ?? "0")")
+                }
+                if weftEnabled {
+                    Text("纬纱占比: \(material.material.weftRatio ?? "0")")
+                }
             }
         }
         .padding(8)

@@ -9,9 +9,9 @@ import SwiftUI
 
 enum Tab: String, CaseIterable {
     case home = "house.circle"
-    case chat = "message"
+    case chat = "message.circle"
     case statistic = "chart.bar"
-    case setting = "gear"
+    case setting = "gearshape"
 }
 
 struct ContentView: View {
@@ -19,71 +19,39 @@ struct ContentView: View {
     @ObservedObject private var languageManager = LanguageManager.shared
     
     var body: some View {
-        VStack {
+        ZStack(alignment: .bottom) {
+            // Background gradient
+            LinearGradient(
+                colors: [AppTheme.Colors.background, AppTheme.Colors.secondaryBackground],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            
             // Main content area
-            ZStack {
-                switch selectedTab {
-                case .home:
-                    CalculationHomeView()
-                case .chat:
-                    ChatView()
-                case .statistic:
-                    StatisticHomeView()
-                case .setting:
-                    ProfileView()
-                }
+            TabView(selection: $selectedTab) {
+                CalculationHomeView()
+                    .tag(Tab.home)
+                
+                ChatView()
+                    .tag(Tab.chat)
+                
+                StatisticHomeView()
+                    .tag(Tab.statistic)
+                
+                ProfileView()
+                    .tag(Tab.setting)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
             
             // Custom bottom navigation bar
-            BottomNavigationBar(selectedTab: $selectedTab)
+            CustomTabBar(selectedTab: $selectedTab)
         }
-        .edgesIgnoringSafeArea(.bottom)
+        .ignoresSafeArea(.keyboard)
         .id(languageManager.currentLanguage.rawValue)
     }
 }
 
-struct BottomNavigationBar: View {
-    @Binding var selectedTab: Tab
-    @ObservedObject private var languageManager = LanguageManager.shared
-    
-    var body: some View {
-        HStack {
-            ForEach(Tab.allCases, id: \.self) { tab in
-                Spacer()
-                Button(action: {
-                    withAnimation {
-                        selectedTab = tab
-                    }
-                }) {
-                    VStack {
-                        Image(systemName: tab.rawValue)
-                            .font(.system(size: 24))
-                            .foregroundColor(selectedTab == tab ? .blue : .gray)
-                        Text(tabLabel(for: tab))
-                            .font(.caption)
-                            .foregroundColor(selectedTab == tab ? .blue : .gray)
-                    }
-                }
-                Spacer()
-            }
-        }
-        .padding()
-        .background(Color(UIColor.systemBackground))
-        .clipShape(Capsule())
-        .shadow(radius: 10)
-        .id(languageManager.currentLanguage.rawValue)
-    }
-    
-    private func tabLabel(for tab: Tab) -> String {
-        switch tab {
-        case .home: return "tab_home".localized()
-        case .chat: return "tab_chat".localized()
-        case .statistic: return "tab_statistics".localized()
-        case .setting: return "tab_settings".localized()
-        }
-    }
-}
+// Legacy BottomNavigationBar - replaced with CustomTabBar from CustomComponents
 
 
 

@@ -141,9 +141,8 @@ struct CostCalculatorView: View {
                     SuffixTextField(label: "经纱纱价", text: $materials[0].warpYarnPrice, suffix: "元", keyboardType: .decimalPad)
                     SuffixTextField(label: "纬纱纱价", text: $materials[0].weftYarnPrice, suffix: "元", keyboardType: .decimalPad)
                     
-                    if !useDirectWeftWeight {
-                        SuffixTextField(label: "下机纬密", text: $weftDensity, suffix: "根/cm", keyboardType: .decimalPad)
-                    }
+                    // 下机纬密在纬纱直输时也需要填写
+                    SuffixTextField(label: "下机纬密", text: $weftDensity, suffix: "根/cm", keyboardType: .decimalPad)
                     
                     SuffixTextField(label: "车速", text: $machineSpeed, suffix: "RPM", keyboardType: .decimalPad)
                     SuffixTextField(label: "效率", text: $efficiency, suffix: "%", keyboardType: .decimalPad)

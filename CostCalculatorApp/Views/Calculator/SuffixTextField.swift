@@ -12,24 +12,51 @@ struct SuffixTextField: View {
     @Binding var text: String
     var suffix: String
     var keyboardType: UIKeyboardType = .default
+    var icon: String? = nil
     
-    @State private var isEditing = false
+    @FocusState private var isFocused: Bool
     
     var body: some View {
-        HStack {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
             Text(label)
-                .frame(width: 80, alignment: .leading)
-            TextField("", text: $text, onEditingChanged: { editing in
-                isEditing = editing
-                if editing {
-                    HapticFeedbackManager.shared.selectionChanged() // Add this line
+                .font(AppTheme.Typography.caption1)
+                .foregroundColor(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
+                .animation(AppTheme.Animation.quick, value: isFocused)
+            
+            HStack(spacing: AppTheme.Spacing.xSmall) {
+                if let icon = icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 16))
+                        .foregroundColor(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
+                        .frame(width: 24)
                 }
-            })
-            .keyboardType(keyboardType)
-            if !suffix.isEmpty {
-                Text(suffix)
-                    .foregroundColor(.gray)
+                
+                TextField("", text: $text)
+                    .keyboardType(keyboardType)
+                    .focused($isFocused)
+                    .font(AppTheme.Typography.body)
+                    .onChange(of: isFocused) { focused in
+                        if focused {
+                            HapticFeedbackManager.shared.selectionChanged()
+                        }
+                    }
+                
+                if !suffix.isEmpty {
+                    Text(suffix)
+                        .font(AppTheme.Typography.footnote)
+                        .foregroundColor(AppTheme.Colors.tertiaryText)
+                }
             }
+            .padding(AppTheme.Spacing.small)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
+                    .fill(AppTheme.Colors.secondaryBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
+                    .stroke(isFocused ? AppTheme.Colors.primary : Color.clear, lineWidth: 2)
+                    .animation(AppTheme.Animation.quick, value: isFocused)
+            )
         }
     }
 }
