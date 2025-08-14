@@ -86,7 +86,9 @@ struct Calculator {
             machineSpeed: machineSpeed,
             efficiency: efficiency,
             dailyLaborCost: dailyLaborCost,
-            fixedCost: fixedCost
+            fixedCost: fixedCost,
+            useDirectWarpWeight: useDirectWarpWeight,
+            useDirectWeftWeight: useDirectWeftWeight
         ) else {
             alertMessage = "输入验证失败。"
             return false
@@ -162,20 +164,59 @@ struct Calculator {
         machineSpeed: String,
         efficiency: String,
         dailyLaborCost: String,
-        fixedCost: String
+        fixedCost: String,
+        useDirectWarpWeight: Bool = false,
+        useDirectWeftWeight: Bool = false
     ) -> ValidatedValues? {
         
-        guard let boxNumberValue = Double(boxNumber),
-              let threadingValue = Double(threading),
-              let fabricWidthValue = Double(fabricWidth),
-              let edgeFinishingValue = Double(edgeFinishing),
-              let fabricShrinkageValue = Double(fabricShrinkage),
-              let weftDensityValue = Double(weftDensity),
-              let machineSpeedValue = Double(machineSpeed),
+        // Always required values
+        guard let machineSpeedValue = Double(machineSpeed),
               let efficiencyValue = Double(efficiency),
               let laborCostValue = Double(dailyLaborCost),
               let fixedCostValue = Double(fixedCost) else {
             return nil
+        }
+        
+        // Conditionally required values based on weight switches
+        var boxNumberValue: Double = 0
+        var threadingValue: Double = 0
+        var fabricWidthValue: Double = 0
+        var edgeFinishingValue: Double = 0
+        var fabricShrinkageValue: Double = 0
+        var weftDensityValue: Double = 0
+        
+        // Warp-related values (only needed if not using direct warp weight)
+        if !useDirectWarpWeight {
+            guard let boxNum = Double(boxNumber.isEmpty ? "0" : boxNumber),
+                  let threadingNum = Double(threading.isEmpty ? "0" : threading),
+                  let fabricWidthNum = Double(fabricWidth.isEmpty ? "0" : fabricWidth),
+                  let edgeFinishingNum = Double(edgeFinishing.isEmpty ? "0" : edgeFinishing),
+                  let fabricShrinkageNum = Double(fabricShrinkage.isEmpty ? "0" : fabricShrinkage) else {
+                return nil
+            }
+            boxNumberValue = boxNum
+            threadingValue = threadingNum
+            fabricWidthValue = fabricWidthNum
+            edgeFinishingValue = edgeFinishingNum
+            fabricShrinkageValue = fabricShrinkageNum
+        } else {
+            // Still need fabric width and edge finishing if not using direct weft weight
+            if !useDirectWeftWeight {
+                guard let fabricWidthNum = Double(fabricWidth.isEmpty ? "0" : fabricWidth),
+                      let edgeFinishingNum = Double(edgeFinishing.isEmpty ? "0" : edgeFinishing) else {
+                    return nil
+                }
+                fabricWidthValue = fabricWidthNum
+                edgeFinishingValue = edgeFinishingNum
+            }
+        }
+        
+        // Weft-related values (only needed if not using direct weft weight)
+        if !useDirectWeftWeight {
+            guard let weftDensityNum = Double(weftDensity.isEmpty ? "0" : weftDensity) else {
+                return nil
+            }
+            weftDensityValue = weftDensityNum
         }
         
         return ValidatedValues(
@@ -255,7 +296,11 @@ struct Calculator {
             
             for material in materials {
                 // Validate material
-                let materialValidation = InputValidator.validateMaterial(material)
+                let materialValidation = InputValidator.validateMaterial(
+                    material,
+                    useDirectWarpWeight: useDirectWarpWeight,
+                    useDirectWeftWeight: useDirectWeftWeight
+                )
                 if case .failure(let message) = materialValidation {
                     return .failure(.materialValidationFailed(message))
                 }

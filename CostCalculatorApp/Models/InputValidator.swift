@@ -170,7 +170,11 @@ struct InputValidator {
         return .success(0)
     }
     
-    static func validateMaterial(_ material: Material) -> ValidationResult {
+    static func validateMaterial(
+        _ material: Material,
+        useDirectWarpWeight: Bool = false,
+        useDirectWeftWeight: Bool = false
+    ) -> ValidationResult {
         // Validate warp ratio
         let warpRatioResult = validateRatio(
             material.warpRatio ?? material.ratio,
@@ -191,26 +195,31 @@ struct InputValidator {
             return .failure(message)
         }
         
-        // Validate yarn values
-        let warpYarnResult = validateYarnValue(
-            material.warpYarnValue,
-            materialName: material.name,
-            yarnType: material.warpYarnTypeSelection
-        )
-        if case .failure(let message) = warpYarnResult {
-            return .failure(message)
+        // Validate warp yarn values only if not using direct warp weight
+        if !useDirectWarpWeight {
+            let warpYarnResult = validateYarnValue(
+                material.warpYarnValue,
+                materialName: material.name,
+                yarnType: material.warpYarnTypeSelection
+            )
+            if case .failure(let message) = warpYarnResult {
+                return .failure(message)
+            }
         }
         
-        let weftYarnResult = validateYarnValue(
-            material.weftYarnValue,
-            materialName: material.name,
-            yarnType: material.weftYarnTypeSelection
-        )
-        if case .failure(let message) = weftYarnResult {
-            return .failure(message)
+        // Validate weft yarn values only if not using direct weft weight
+        if !useDirectWeftWeight {
+            let weftYarnResult = validateYarnValue(
+                material.weftYarnValue,
+                materialName: material.name,
+                yarnType: material.weftYarnTypeSelection
+            )
+            if case .failure(let message) = weftYarnResult {
+                return .failure(message)
+            }
         }
         
-        // Validate yarn prices
+        // Validate yarn prices (always required for cost calculation)
         let warpPriceResult = validateYarnPrice(
             material.warpYarnPrice,
             materialName: material.name,
