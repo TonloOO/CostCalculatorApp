@@ -20,13 +20,30 @@ struct MaterialRow: View {
     @State private var weftExpanded = false
 
     var body: some View {
-        DisclosureGroup(
-            isExpanded: $isExpanded,
-            content: {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header: Left editable name, Right expand/collapse button
+            HStack(spacing: 8) {
+                TextField("材料名称", text: $material.name)
+                    .font(.headline)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button(action: {
+                    withAnimation { isExpanded.toggle() }
+                }) {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(Color(.systemGray))
+                        .padding(8)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .contentShape(Rectangle())
+            }
+            .padding(.horizontal, 2)
+
+            if isExpanded {
                 Group {
-                    // Material Name
-                    SuffixTextField(label: "材料名称", text: $material.name, suffix: "")
-                    
                     // Warp Switch
                     Toggle(isOn: $warpExpanded) {
                         Text("经纱参数")
@@ -35,16 +52,14 @@ struct MaterialRow: View {
                     }
                     .onChange(of: warpExpanded) {
                         if !warpExpanded {
-                            // Warp toggle is switched off, clear the warp data
                             material.warpYarnValue = ""
-                            material.warpYarnTypeSelection = .dNumber // Set to default if needed
-                            material.warpYarnPrice = ""  
+                            material.warpYarnTypeSelection = .dNumber
+                            material.warpYarnPrice = ""
                             material.warpRatio = nil
                         }
                     }
-                    
+
                     if warpExpanded {
-                        // Warp Parameters
                         YarnInputField(
                             yarnValue: $material.warpYarnValue,
                             yarnTypeSelection: $material.warpYarnTypeSelection,
@@ -62,7 +77,7 @@ struct MaterialRow: View {
                             keyboardType: .decimalPad
                         )
                     }
-                    
+
                     // Weft Switch
                     Toggle(isOn: $weftExpanded) {
                         Text("纬纱参数")
@@ -71,16 +86,14 @@ struct MaterialRow: View {
                     }
                     .onChange(of: weftExpanded) {
                         if !weftExpanded {
-                            // Weft toggle is switched off, clear the weft data
                             material.weftYarnValue = ""
-                            material.weftYarnTypeSelection = .dNumber // Set to default if needed
+                            material.weftYarnTypeSelection = .dNumber
                             material.weftYarnPrice = ""
                             material.weftRatio = nil
                         }
                     }
-                    
+
                     if weftExpanded {
-                        // Weft Parameters
                         YarnInputField(
                             yarnValue: $material.weftYarnValue,
                             yarnTypeSelection: $material.weftYarnTypeSelection,
@@ -100,14 +113,10 @@ struct MaterialRow: View {
                     }
                 }
                 .padding(.leading, 10)
-            },
-            label: {
-                Text(material.name)
-                    .font(.headline)
+                .padding(.top, 2)
             }
-        )
+        }
         .onAppear {
-            // Initialize the toggles based on existing data
             warpExpanded = !(material.warpYarnValue.isEmpty && material.warpYarnPrice.isEmpty && (material.warpRatio == nil || material.warpRatio?.isEmpty == true))
             weftExpanded = !(material.weftYarnValue.isEmpty && material.weftYarnPrice.isEmpty && (material.weftRatio == nil || material.weftRatio?.isEmpty == true))
         }

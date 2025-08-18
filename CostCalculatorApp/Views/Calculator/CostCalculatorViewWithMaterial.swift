@@ -84,79 +84,137 @@ struct CostCalculatorViewWithMaterial: View {
     @Environment(\.scenePhase) private var scenePhase
     
     var body: some View {
-        Form {
-            Section(header: Text("客户信息")) {
-                SuffixTextField(label: "客户名称/单号", text: $customerName, suffix: "")
-            }
-            
-            
-            Section(header: HStack {
-                Text("材料列表")
-                Spacer()
-                Button(action: {
-                    HapticFeedbackManager.shared.impact(style: .medium)
-                    materials.append(Material(name: "材料" + String(materials.count + 1), warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: nil, weftRatio: nil, ratio: "1"))
-                }) {
-                    Image(systemName: "plus")
+        ScrollView {
+            VStack(spacing: AppTheme.Spacing.medium) {
+                // 客户信息
+                CompactCard(title: "客户信息", icon: "person.circle") {
+                    CompactInputField(config: InputFieldConfig(
+                        label: "客户名称/单号",
+                        text: $customerName,
+                        suffix: "",
+                        keyboardType: .default
+                    ))
                 }
-            }) {
-                ForEach($materials) { material in
-                    MaterialRow(material: material, materialsBinding: $materials)
-                }
-                .onDelete(perform: deleteMaterials)
-            }
-
-            
-            Section(header: Text("输入参数")) {
-                Group {
-                    SuffixTextField(label: "筘号", text: $boxNumber, suffix: "", keyboardType: .decimalPad)
-                    SuffixTextField(label: "穿入", text: $threading, suffix: "", keyboardType: .decimalPad)
-                    SuffixTextField(label: "门幅", text: $fabricWidth, suffix: "cm", keyboardType: .decimalPad)
-                    SuffixTextField(label: "加边", text: $edgeFinishing, suffix: "cm", keyboardType: .decimalPad)
-                    SuffixTextField(label: "织缩", text: $fabricShrinkage, suffix: "", keyboardType: .decimalPad)
-                    SuffixTextField(label: "下机纬密", text: $weftDensity, suffix: "根/cm", keyboardType: .decimalPad)
-                    SuffixTextField(label: "车速", text: $machineSpeed, suffix: "RPM", keyboardType: .decimalPad)
-                    SuffixTextField(label: "效率", text: $efficiency, suffix: "%", keyboardType: .decimalPad)
-                    SuffixTextField(label: "日工费", text: $dailyLaborCost, suffix: "元", keyboardType: .decimalPad)
-                    SuffixTextField(label: "牵经费用", text: $fixedCost, suffix: "元/米", keyboardType: .decimalPad)
-                }
-            }
-            
-            Section {
-                Button(action: {
-                    HapticFeedbackManager.shared.impact(style: .medium)
-                    calculateCosts()
-                }) {
-                    Text("计算总费用")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-            }
-            
-            Section {
-                Button(action: {
-                    HapticFeedbackManager.shared.impact(style: .medium)
-                    activeSheet = .history
-                }) {
-                    Text("查看历史记录")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-            }
-            
-            Section(header: Text("常量设置")) {
-                Button(action: {
-                    activeSheet = .constants
-                }) {
-                    HStack {
-                        Text("修改计算常量")
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.gray)
+                
+                // 材料列表
+                CompactCard(
+                    title: nil
+                ) {
+                    VStack(spacing: AppTheme.Spacing.small) {
+                        CompactSectionHeader(
+                            title: "材料列表",
+                            icon: "square.stack.3d.up",
+                            action: {
+                                HapticFeedbackManager.shared.impact(style: .medium)
+                                materials.append(Material(name: "材料" + String(materials.count + 1), warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: nil, weftRatio: nil, ratio: "1"))
+                            }
+                        )
+                        
+                        ForEach($materials) { material in
+                            MaterialRow(material: material, materialsBinding: $materials)
+                        }
+                        .onDelete(perform: deleteMaterials)
                     }
                 }
+
+                
+                // 基础参数 - 两列布局
+                CompactCard(title: "基础参数", icon: "square.grid.2x2") {
+                    VStack(spacing: AppTheme.Spacing.small) {
+                        CompactInputRow(
+                            leftField: InputFieldConfig(label: "筘号", text: $boxNumber),
+                            rightField: InputFieldConfig(label: "穿入", text: $threading)
+                        )
+                        CompactInputRow(
+                            leftField: InputFieldConfig(label: "门幅", text: $fabricWidth, suffix: "cm"),
+                            rightField: InputFieldConfig(label: "加边", text: $edgeFinishing, suffix: "cm")
+                        )
+                        CompactInputField(config: InputFieldConfig(
+                            label: "织缩",
+                            text: $fabricShrinkage
+                        ))
+                    }
+                }
+                
+                // 生产参数 - 两列布局
+                CompactCard(title: "生产参数", icon: "gearshape.2") {
+                    VStack(spacing: AppTheme.Spacing.small) {
+                        CompactInputRow(
+                            leftField: InputFieldConfig(label: "下机纬密", text: $weftDensity, suffix: "根/cm"),
+                            rightField: InputFieldConfig(label: "车速", text: $machineSpeed, suffix: "RPM")
+                        )
+                        CompactInputRow(
+                            leftField: InputFieldConfig(label: "效率", text: $efficiency, suffix: "%"),
+                            rightField: InputFieldConfig(label: "日工费", text: $dailyLaborCost, suffix: "元")
+                        )
+                        CompactInputField(config: InputFieldConfig(
+                            label: "牵经费用",
+                            text: $fixedCost,
+                            suffix: "元/米"
+                        ))
+                    }
+                }
+                
+                // 操作按钮
+                VStack(spacing: AppTheme.Spacing.small) {
+                    Button(action: {
+                        HapticFeedbackManager.shared.impact(style: .medium)
+                        calculateCosts()
+                    }) {
+                        HStack {
+                            Image(systemName: "function")
+                            Text("计算总费用")
+                        }
+                        .font(AppTheme.Typography.buttonText)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(AppTheme.Colors.primaryGradient)
+                        .cornerRadius(AppTheme.CornerRadius.medium)
+                    }
+                    
+                    HStack(spacing: AppTheme.Spacing.small) {
+                        Button(action: {
+                            HapticFeedbackManager.shared.impact(style: .medium)
+                            activeSheet = .history
+                        }) {
+                            HStack {
+                                Image(systemName: "clock.arrow.circlepath")
+                                Text("历史记录")
+                            }
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(AppTheme.Colors.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
+                                    .stroke(AppTheme.Colors.primary, lineWidth: 1.5)
+                            )
+                        }
+                        
+                        Button(action: {
+                            activeSheet = .constants
+                        }) {
+                            HStack {
+                                Image(systemName: "slider.horizontal.3")
+                                Text("常量设置")
+                            }
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(AppTheme.Colors.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
+                                    .stroke(AppTheme.Colors.primary, lineWidth: 1.5)
+                            )
+                        }
+                    }
+                }
+                .padding(.horizontal)
             }
+            .padding()
         }
+        .background(AppTheme.Colors.groupedBackground)
         .navigationTitle("多材料纱价费用计算")
         .onChange(of: scenePhase) {
             if scenePhase == .active {

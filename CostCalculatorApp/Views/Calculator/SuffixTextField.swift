@@ -54,7 +54,10 @@ struct SuffixTextField: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
-                    .stroke(isFocused ? AppTheme.Colors.primary : Color.clear, lineWidth: 2)
+                    .stroke(
+                        isFocused ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText.opacity(0.2),
+                        lineWidth: isFocused ? 2 : 1
+                    )
                     .animation(AppTheme.Animation.quick, value: isFocused)
             )
         }

@@ -1,0 +1,13 @@
+## Swift
+.DS_Store
+.build/
+.swiftpm/
+.vscode/
+.idea/
+.cursorrules
+
+## Xcode
+.DS_Store
+.build/
+.swiftpm/
+.xcodeproj/
