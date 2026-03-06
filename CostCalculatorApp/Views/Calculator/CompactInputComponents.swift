@@ -195,3 +195,67 @@ struct CompactCard<Content: View>: View {
         )
     }
 }
+
+// MARK: - Step Card (numbered card with step indicator)
+struct StepCard<Content: View>: View {
+    let step: Int
+    let title: String
+    var icon: String? = nil
+    var headerAction: (() -> Void)? = nil
+    @ViewBuilder let content: Content
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            // Step number indicator
+            VStack(spacing: 4) {
+                ZStack {
+                    Circle()
+                        .fill(AppTheme.Colors.primaryGradient)
+                        .frame(width: 26, height: 26)
+                    Text("\(step)")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                }
+                
+                Rectangle()
+                    .fill(AppTheme.Colors.primary.opacity(0.15))
+                    .frame(width: 2)
+                    .frame(maxHeight: .infinity)
+            }
+            .frame(width: 26)
+            .padding(.trailing, 10)
+            
+            // Card content
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
+                HStack {
+                    if let icon = icon {
+                        Image(systemName: icon)
+                            .font(.system(size: 14))
+                            .foregroundColor(AppTheme.Colors.primary)
+                    }
+                    Text(title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(AppTheme.Colors.primary)
+                    
+                    Spacer()
+                    
+                    if let action = headerAction {
+                        Button(action: action) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(AppTheme.Colors.primary)
+                        }
+                    }
+                }
+                
+                content
+            }
+            .padding(AppTheme.Spacing.small)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                    .fill(AppTheme.Colors.secondaryBackground)
+            )
+        }
+    }
+}

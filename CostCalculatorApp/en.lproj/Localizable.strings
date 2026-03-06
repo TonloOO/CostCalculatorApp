@@ -21,7 +21,7 @@
 
 /* About View */
 "cost_calculator" = "Cost Calculator";
-"version" = "Version 1.3.0";
+"version" = "Version 1.5.0";
 "features" = "Features:";
 "feature_cost_calculation" = "• Textile Cost Calculation";
 "feature_multi_material" = "• Multi-Material Support";

@@ -8,6 +8,29 @@
 import SwiftUI
 import CoreData
 
+// MARK: - Time Filter
+enum TimeFilter: String, CaseIterable {
+    case all = "全部"
+    case threeDays = "近3天"
+    case thisWeek = "本周"
+    case thisMonth = "本月"
+    case custom = "自定义"
+    
+    var cutoffDate: Date? {
+        let calendar = Calendar.current
+        let now = Date()
+        switch self {
+        case .all, .custom: return nil
+        case .threeDays: return calendar.date(byAdding: .day, value: -3, to: calendar.startOfDay(for: now))
+        case .thisWeek:
+            let weekday = calendar.component(.weekday, from: now)
+            let daysToMonday = (weekday == 1) ? 6 : weekday - 2
+            return calendar.date(byAdding: .day, value: -daysToMonday, to: calendar.startOfDay(for: now))
+        case .thisMonth: return calendar.date(from: calendar.dateComponents([.year, .month], from: now))
+        }
+    }
+}
+
 struct HistoryView: View {
     @Environment(\.managedObjectContext) private var viewContext
 
@@ -17,181 +40,372 @@ struct HistoryView: View {
     private var records: FetchedResults<CalculationRecord>
     
     @State private var searchText: String = ""
-    @Environment(\.editMode) var editMode
-
-    @State private var startDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
-    @State private var endDate: Date = Date()
+    @AppStorage("historyTimeFilter") private var selectedFilterRaw: String = TimeFilter.all.rawValue
+    @AppStorage("historyCustomStart") private var customStartInterval: Double = (Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()).timeIntervalSince1970
+    @AppStorage("historyCustomEnd") private var customEndInterval: Double = Date().timeIntervalSince1970
+    @State private var deleteError: String?
+    @State private var showDeleteError = false
+    @State private var recordToEdit: CalculationRecord?
     
+    private var selectedFilter: TimeFilter {
+        TimeFilter(rawValue: selectedFilterRaw) ?? .all
+    }
+    
+    private var customStartDate: Binding<Date> {
+        Binding(
+            get: { Date(timeIntervalSince1970: customStartInterval) },
+            set: { customStartInterval = $0.timeIntervalSince1970 }
+        )
+    }
+    private var customEndDate: Binding<Date> {
+        Binding(
+            get: { Date(timeIntervalSince1970: customEndInterval) },
+            set: { customEndInterval = $0.timeIntervalSince1970 }
+        )
+    }
+
     var filteredRecords: [CalculationRecord] {
-        // Create the time range: from 00:00 of startDate to 23:59 of endDate
-        let calendar = Calendar.current
-        let adjustedStartDate = calendar.date(bySettingHour: 0, minute: 0, second: 0, of: startDate) ?? startDate
-        let adjustedEndDate = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) ?? endDate
-        
-        // Sort records by date safely
-        let sortedRecords = records.sorted { (record1, record2) -> Bool in
-            guard let date1 = record1.date, let date2 = record2.date else { return false }
-            return date1 > date2
+        let sortedRecords = records.sorted { (r1, r2) -> Bool in
+            guard let d1 = r1.date, let d2 = r2.date else { return false }
+            return d1 > d2
         }
         
-        // Filter by adjusted date range
-        let dateFilteredRecords = sortedRecords.filter { record in
-            if let date = record.date {
-                return date >= adjustedStartDate && date <= adjustedEndDate
+        let dateFiltered: [CalculationRecord]
+        if selectedFilter == .custom {
+            let calendar = Calendar.current
+            let start = calendar.startOfDay(for: Date(timeIntervalSince1970: customStartInterval))
+            let endRaw = Date(timeIntervalSince1970: customEndInterval)
+            let end = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endRaw) ?? endRaw
+            dateFiltered = sortedRecords.filter { record in
+                guard let date = record.date else { return false }
+                return date >= start && date <= end
             }
-            return false
+        } else if let cutoff = selectedFilter.cutoffDate {
+            dateFiltered = sortedRecords.filter { record in
+                guard let date = record.date else { return false }
+                return date >= cutoff
+            }
+        } else {
+            dateFiltered = sortedRecords
         }
         
-        // Filter by search text if not empty
         if searchText.isEmpty {
-            return dateFilteredRecords
+            return dateFiltered
         } else {
-            return dateFilteredRecords.filter { record in
-                if let customerName = record.customerName {
-                    return fuzzyMatch(searchText: searchText, targetText: customerName)
-                }
-                return false
+            return dateFiltered.filter { record in
+                guard let name = record.customerName else { return false }
+                return fuzzyMatch(searchText: searchText, targetText: name)
             }
         }
     }
-
-
 
     var body: some View {
-        VStack {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("开始日期") // Custom label
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    DatePicker("", selection: $startDate, displayedComponents: .date)
-                        .datePickerStyle(.compact)
-                        .labelsHidden()
-                        .environment(\.locale, Locale(identifier: "zh_CN")) // Set to Chinese
-                }
-                .padding(.horizontal)
-
-                VStack(alignment: .leading) {
-                    Text("结束日期") // Custom label
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    DatePicker("", selection: $endDate, displayedComponents: .date)
-                        .datePickerStyle(.compact)
-                        .labelsHidden()
-                        .environment(\.locale, Locale(identifier: "zh_CN")) // Set to Chinese
-                }
-                .padding(.horizontal)
-            }
-
+        VStack(spacing: 0) {
+            filterBar
             
-            List {
-                if records.isEmpty {
-                    Text("暂无历史记录")
-                        .foregroundColor(.gray)
-                } else {
+            if records.isEmpty {
+                Spacer()
+                EmptyStateView(
+                    icon: "clock.badge.questionmark",
+                    title: "暂无历史记录",
+                    subtitle: "完成一次费用计算后，记录将显示在这里"
+                )
+                Spacer()
+            } else if filteredRecords.isEmpty {
+                Spacer()
+                EmptyStateView(
+                    icon: "magnifyingglass",
+                    title: "未找到记录",
+                    subtitle: "尝试调整筛选条件或搜索关键词"
+                )
+                Spacer()
+            } else {
+                List {
                     ForEach(filteredRecords) { record in
                         NavigationLink(destination: CalculationDetailView(record: record)) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("客户/单号：\(record.customerName ?? "未知")")
-                                    .font(.headline)
-                                if let date = record.date {
-                                    Text("计算于 \(date, formatter: dateFormatter)")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                // Show material info for single material records
-                                if isSingleMaterialRecord(record) {
-                                    if let warpYarnValue = record.warpYarnValue,
-                                       let warpYarnType = record.warpYarnTypeSelection,
-                                       let weftYarnValue = record.weftYarnValue,
-                                       let weftYarnType = record.weftYarnTypeSelection {
-                                        Text("经纱: \(warpYarnValue) \(warpYarnType) • 纬纱: \(weftYarnValue) \(weftYarnType)")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                                
-                                Text("总费用：\(record.totalCost, specifier: "%.2f") 元/米")
-                                    .font(.subheadline)
-                                    .foregroundColor(.primary)
+                            HistoryRecordRow(record: record)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                deleteRecord(record)
+                            } label: {
+                                Label("删除", systemImage: "trash")
                             }
                         }
-                    }
-                    .onDelete(perform: deleteRecords)
-                }
-            }
-            .navigationTitle("历史记录")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        if editMode?.wrappedValue == .active {
-                            editMode?.wrappedValue = .inactive
-                        } else {
-                            editMode?.wrappedValue = .active
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button {
+                                recordToEdit = record
+                            } label: {
+                                Label("编辑", systemImage: "pencil")
+                            }
+                            .tint(AppTheme.Colors.primary)
                         }
-                    }) {
-                        Text(editMode?.wrappedValue == .active ? "完成" : "编辑")
                     }
                 }
+                .listStyle(.insetGrouped)
             }
-            .searchable(text: $searchText, prompt: "搜索客户名称或单号")
+        }
+        .navigationTitle("历史记录")
+        .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, prompt: "搜索客户名称或单号")
+        .sheet(item: $recordToEdit) { record in
+            NavigationView {
+                EditCalculationView(record: record)
+                    .navigationBarItems(trailing: Button("关闭") {
+                        recordToEdit = nil
+                    })
+            }
+        }
+        .alert("删除失败", isPresented: $showDeleteError) {
+            Button("确定", role: .cancel) {}
+        } message: {
+            Text(deleteError ?? "未知错误")
         }
     }
+    
+    // MARK: - Filter Bar
+    @ViewBuilder
+    private var filterBar: some View {
+        VStack(spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(TimeFilter.allCases, id: \.self) { filter in
+                        let isSelected = selectedFilter == filter
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedFilterRaw = filter.rawValue
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                if filter == .custom {
+                                    Image(systemName: "calendar")
+                                        .font(.system(size: 11))
+                                }
+                                Text(filter.rawValue)
+                                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                            }
+                            .foregroundColor(isSelected ? .white : AppTheme.Colors.secondaryText)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(
+                                Capsule().fill(isSelected ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryBackground)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, AppTheme.Spacing.medium)
+                .padding(.vertical, 10)
+            }
+            
+            if selectedFilter == .custom {
+                customDateRow
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top)),
+                        removal: .opacity
+                    ))
+            }
+        }
+        .background(AppTheme.Colors.secondaryBackground)
+    }
+    
+    @ViewBuilder
+    private var customDateRow: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Text("从")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                DatePicker("", selection: customStartDate, displayedComponents: .date)
+                    .datePickerStyle(.compact)
+                    .labelsHidden()
+                    .environment(\.locale, Locale(identifier: "zh_CN"))
+                    .fixedSize()
+            }
+            
+            Spacer()
+            
+            Rectangle()
+                .fill(AppTheme.Colors.tertiaryText.opacity(0.3))
+                .frame(width: 16, height: 1)
+            
+            Spacer()
+            
+            HStack(spacing: 6) {
+                Text("至")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                DatePicker("", selection: customEndDate, displayedComponents: .date)
+                    .datePickerStyle(.compact)
+                    .labelsHidden()
+                    .environment(\.locale, Locale(identifier: "zh_CN"))
+                    .fixedSize()
+            }
+            
+        }
+        .padding(.horizontal, AppTheme.Spacing.medium)
+        .padding(.bottom, 10)
+    }
 
-    private func deleteRecords(offsets: IndexSet) {
+    private func deleteRecord(_ record: CalculationRecord) {
         withAnimation {
-            offsets.map { records[$0] }.forEach(viewContext.delete)
-
+            viewContext.delete(record)
             do {
                 try viewContext.save()
             } catch {
-                // Handle the error appropriately.
                 let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+                deleteError = nsError.localizedDescription
+                showDeleteError = true
             }
         }
     }
-
-    private var dateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")  // Set locale to Chinese
-        formatter.dateFormat = "yyyy年MM月dd日 HH:mm"    // Custom date format in Chinese
-        return formatter
-    }
     
-    // Custom fuzzy search function
-    func fuzzyMatch(searchText: String, targetText: String) -> Bool {
-        if searchText.isEmpty {
-            return true
-        }
-        
+    private func fuzzyMatch(searchText: String, targetText: String) -> Bool {
+        if searchText.isEmpty { return true }
         var searchIndex = searchText.startIndex
         var targetIndex = targetText.startIndex
-        
         while searchIndex < searchText.endIndex && targetIndex < targetText.endIndex {
             if searchText[searchIndex] == targetText[targetIndex] {
                 searchIndex = searchText.index(after: searchIndex)
             }
             targetIndex = targetText.index(after: targetIndex)
         }
-        
         return searchIndex == searchText.endIndex
     }
+}
+
+// MARK: - History Record Row
+struct HistoryRecordRow: View {
+    let record: CalculationRecord
     
-    // Helper function to determine if a record is from single material calculation
-    private func isSingleMaterialRecord(_ record: CalculationRecord) -> Bool {
-        // Check if it has materialsResult data
-        if let data = record.materialsResult {
-            if let results = try? JSONDecoder().decode([MaterialCalculationResult].self, from: data) {
-                return results.count == 1 && results.first?.material.name == "单材料"
+    private var materialType: String {
+        if let data = record.materialsResult,
+           let results = try? JSONDecoder().decode([MaterialCalculationResult].self, from: data) {
+            if results.count == 1 && results.first?.material.name == "单材料" {
+                return "单材料"
+            }
+            return "\(results.count)种材料"
+        }
+        return "单材料"
+    }
+    
+    private var isSingleMaterial: Bool {
+        materialType == "单材料"
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(record.customerName ?? "未知")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .lineLimit(1)
+                    
+                    if let date = record.date {
+                        Text(date, formatter: compactDateFormatter)
+                            .font(.system(size: 12))
+                            .foregroundColor(AppTheme.Colors.tertiaryText)
+                    }
+                }
+                
+                Spacer()
+                
+                // Material type badge
+                Text(materialType)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(isSingleMaterial ? AppTheme.Colors.primary : Color(hex: "FF6B6B"))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule().fill(
+                            isSingleMaterial
+                            ? AppTheme.Colors.primary.opacity(0.1)
+                            : Color(hex: "FF6B6B").opacity(0.1)
+                        )
+                    )
+            }
+            
+            // Mini cost bar
+            MiniCostBar(
+                warpCost: record.warpCost,
+                weftCost: record.weftCost,
+                laborCost: record.laborCost,
+                warpingCost: record.warpingCost
+            )
+            
+            HStack {
+                Text("总费用")
+                    .font(.system(size: 13))
+                    .foregroundColor(AppTheme.Colors.secondaryText)
+                Spacer()
+                Text(String(format: "%.3f", record.totalCost))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Colors.accent)
+                Text("元/米")
+                    .font(.system(size: 11))
+                    .foregroundColor(AppTheme.Colors.tertiaryText)
             }
         }
-        // For legacy records without materialsResult, check if basic yarn data exists
-        // Only return true if we have all required yarn information
-        return record.warpYarnValue != nil && 
-               record.weftYarnValue != nil && 
-               record.warpYarnTypeSelection != nil && 
-               record.weftYarnTypeSelection != nil
+        .padding(.vertical, 4)
+    }
+    
+    private var compactDateFormatter: DateFormatter {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "MM-dd HH:mm"
+        return f
+    }
+}
+
+// MARK: - Mini Cost Bar
+struct MiniCostBar: View {
+    let warpCost: Double
+    let weftCost: Double
+    let laborCost: Double
+    let warpingCost: Double
+    
+    private var segments: [(String, Double, Color)] {
+        [
+            ("经纱", warpCost, Color(hex: "5B67CA")),
+            ("纬纱", weftCost, Color(hex: "FF6B6B")),
+            ("工费", laborCost, Color(hex: "FFC107")),
+            ("牵经", warpingCost, Color(hex: "43E97B")),
+        ].filter { $0.1 > 0 }
+    }
+    
+    private var total: Double {
+        segments.reduce(0) { $0 + $1.1 }
+    }
+    
+    var body: some View {
+        VStack(spacing: 3) {
+            GeometryReader { geo in
+                HStack(spacing: 1) {
+                    ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+                        let fraction = total > 0 ? segment.1 / total : 0
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(segment.2)
+                            .frame(width: max(fraction * (geo.size.width - CGFloat(segments.count - 1)), 0))
+                    }
+                }
+            }
+            .frame(height: 6)
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+            
+            HStack(spacing: 8) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+                    HStack(spacing: 2) {
+                        Circle()
+                            .fill(segment.2)
+                            .frame(width: 5, height: 5)
+                        Text(segment.0)
+                            .font(.system(size: 9))
+                            .foregroundColor(AppTheme.Colors.tertiaryText)
+                    }
+                }
+                Spacer()
+            }
+        }
     }
 }

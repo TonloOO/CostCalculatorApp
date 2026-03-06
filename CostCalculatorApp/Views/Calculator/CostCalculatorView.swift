@@ -46,6 +46,36 @@ struct CostCalculatorView: View {
         Material(name: "单材料", warpYarnValue: "", warpYarnTypeSelection: .dNumber, weftYarnValue: "", weftYarnTypeSelection: .dNumber, warpYarnPrice: "", weftYarnPrice: "", warpRatio: "1", weftRatio: "1", ratio: "1")
     ]
 
+    init(prefillData: TextileRecognitionResult? = nil) {
+        guard let data = prefillData, let mat = data.materials.first else { return }
+        _customerName = State(initialValue: data.customerName ?? "")
+        _boxNumber = State(initialValue: data.boxNumber ?? "")
+        _threading = State(initialValue: data.threading ?? "")
+        _fabricWidth = State(initialValue: data.fabricWidth ?? "")
+        _edgeFinishing = State(initialValue: data.edgeFinishing ?? "")
+        _fabricShrinkage = State(initialValue: data.fabricShrinkage ?? "")
+        _weftDensity = State(initialValue: data.weftDensity ?? "")
+        _machineSpeed = State(initialValue: data.machineSpeed ?? "")
+        _efficiency = State(initialValue: data.efficiency ?? "")
+        _dailyLaborCost = State(initialValue: data.dailyLaborCost ?? "")
+        _fixedCost = State(initialValue: data.fixedCost ?? "")
+
+        let warpType: YarnType = mat.warpYarnType == "支数" ? .yarnCount : .dNumber
+        let weftType: YarnType = mat.weftYarnType == "支数" ? .yarnCount : .dNumber
+        _materials = State(initialValue: [
+            Material(
+                name: mat.name ?? "单材料",
+                warpYarnValue: mat.warpYarnValue ?? "",
+                warpYarnTypeSelection: warpType,
+                weftYarnValue: mat.weftYarnValue ?? "",
+                weftYarnTypeSelection: weftType,
+                warpYarnPrice: mat.warpYarnPrice ?? "",
+                weftYarnPrice: mat.weftYarnPrice ?? "",
+                warpRatio: "1", weftRatio: "1", ratio: "1"
+            )
+        ])
+    }
+
 
 
     // Constants
@@ -57,6 +87,7 @@ struct CostCalculatorView: View {
     // Active sheet management
     @State private var activeSheet: ActiveSheet?
     @State private var clipboardContentToImport: String = ""
+    @State private var lastSavedRecord: CalculationRecord?
     
     @State private var activeAlert: AlertType?
     @State private var showWarpPicker = false
@@ -89,215 +120,190 @@ struct CostCalculatorView: View {
     @Environment(\.scenePhase) private var scenePhase
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: AppTheme.Spacing.medium) {
-                // 客户信息
-                CompactCard(title: "客户信息", icon: "person.circle") {
-                    CompactInputField(config: InputFieldConfig(
-                        label: "客户名称/单号",
-                        text: $customerName,
-                        suffix: "",
-                        keyboardType: .default
-                    ))
-                }
-                
-                // 经纬克重（可选直接输入）
-                if useDirectWarpWeight || useDirectWeftWeight {
-                    CompactCard(title: "直接输入克重", icon: "scalemass") {
-                        VStack(spacing: AppTheme.Spacing.small) {
-                            if useDirectWarpWeight {
-                                CompactInputField(config: InputFieldConfig(
-                                    label: "经纱重量",
-                                    text: $directWarpWeight,
-                                    suffix: "g/m"
-                                ))
-                            }
-                            if useDirectWeftWeight {
-                                CompactInputField(config: InputFieldConfig(
-                                    label: "纬纱重量",
-                                    text: $directWeftWeight,
-                                    suffix: "g/m"
-                                ))
-                            }
-                        }
-                    }
-                }
-                
-                // 重量输入开关
-                HStack(spacing: AppTheme.Spacing.medium) {
-                    Toggle("直接输入经纱重量", isOn: $useDirectWarpWeight)
-                        .font(.system(size: 14))
-                    Toggle("直接输入纬纱重量", isOn: $useDirectWeftWeight)
-                        .font(.system(size: 14))
-                }
-                .padding(.horizontal)
-                
-                // 基础参数 - 两列布局
-                if !useDirectWarpWeight || !useDirectWeftWeight {
-                    CompactCard(title: "基础参数", icon: "square.grid.2x2") {
-                        VStack(spacing: AppTheme.Spacing.small) {
-                            if !useDirectWarpWeight {
-                                CompactInputRow(
-                                    leftField: InputFieldConfig(label: "筘号", text: $boxNumber),
-                                    rightField: InputFieldConfig(label: "穿入", text: $threading)
-                                )
-                                CompactInputRow(
-                                    leftField: InputFieldConfig(label: "门幅", text: $fabricWidth, suffix: "cm"),
-                                    rightField: InputFieldConfig(label: "加边", text: $edgeFinishing, suffix: "cm")
-                                )
-                                CompactInputField(config: InputFieldConfig(
-                                    label: "织缩",
-                                    text: $fabricShrinkage
-                                ))
-                            } else if !useDirectWeftWeight {
-                                CompactInputRow(
-                                    leftField: InputFieldConfig(label: "门幅", text: $fabricWidth, suffix: "cm"),
-                                    rightField: InputFieldConfig(label: "加边", text: $edgeFinishing, suffix: "cm")
-                                )
-                            }
-                        }
-                    }
-                }
-                
-                // 纱线参数 - 经纱和纬纱分组
-                CompactCard(title: "纱线参数", icon: "circle.grid.cross") {
-                    VStack(spacing: AppTheme.Spacing.medium) {
-                        // 经纱组
-                        if !useDirectWarpWeight {
-                            VStack(spacing: AppTheme.Spacing.small) {
-                                Text("经纱")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(AppTheme.Colors.secondaryText)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                
-                                HStack(spacing: AppTheme.Spacing.small) {
-                                    CompactYarnInputField(
-                                        yarnValue: $materials[0].warpYarnValue,
-                                        yarnTypeSelection: $materials[0].warpYarnTypeSelection,
-                                        label: "经纱"
-                                    )
-                                    CompactInputField(config: InputFieldConfig(
-                                        label: "经纱纱价",
-                                        text: $materials[0].warpYarnPrice,
-                                        suffix: "元"
-                                    ))
-                                }
-                            }
-                        }
-                        
-                        // 纬纱组
-                        if !useDirectWeftWeight {
-                            VStack(spacing: AppTheme.Spacing.small) {
-                                Text("纬纱")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(AppTheme.Colors.secondaryText)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                
-                                HStack(spacing: AppTheme.Spacing.small) {
-                                    CompactYarnInputField(
-                                        yarnValue: $materials[0].weftYarnValue,
-                                        yarnTypeSelection: $materials[0].weftYarnTypeSelection,
-                                        label: "纬纱"
-                                    )
-                                    CompactInputField(config: InputFieldConfig(
-                                        label: "纬纱纱价",
-                                        text: $materials[0].weftYarnPrice,
-                                        suffix: "元"
-                                    ))
-                                }
-                            }
-                        }
-                        
-                        // 如果都没有纱线输入，只显示价格
-                        if useDirectWarpWeight && useDirectWeftWeight {
-                            CompactInputRow(
-                                leftField: InputFieldConfig(label: "经纱纱价", text: $materials[0].warpYarnPrice, suffix: "元"),
-                                rightField: InputFieldConfig(label: "纬纱纱价", text: $materials[0].weftYarnPrice, suffix: "元")
-                            )
-                        }
-                    }
-                }
-                
-                // 生产参数 - 两列布局
-                CompactCard(title: "生产参数", icon: "gearshape.2") {
-                    VStack(spacing: AppTheme.Spacing.small) {
-                        CompactInputRow(
-                            leftField: InputFieldConfig(label: "下机纬密", text: $weftDensity, suffix: "根/cm"),
-                            rightField: InputFieldConfig(label: "车速", text: $machineSpeed, suffix: "RPM")
-                        )
-                        CompactInputRow(
-                            leftField: InputFieldConfig(label: "效率", text: $efficiency, suffix: "%"),
-                            rightField: InputFieldConfig(label: "日工费", text: $dailyLaborCost, suffix: "元")
-                        )
+        ZStack(alignment: .bottom) {
+            ScrollView(.vertical, showsIndicators: true) {
+                VStack(spacing: AppTheme.Spacing.medium) {
+                    // STEP 1 - 客户信息
+                    StepCard(step: 1, title: "客户信息", icon: "person.circle") {
                         CompactInputField(config: InputFieldConfig(
-                            label: "牵经费用",
-                            text: $fixedCost,
-                            suffix: "元/米"
+                            label: "客户名称/单号",
+                            text: $customerName,
+                            suffix: "",
+                            keyboardType: .default
                         ))
                     }
-                }
-                
-                // 操作按钮
-                VStack(spacing: AppTheme.Spacing.small) {
-                    Button(action: {
-                        HapticFeedbackManager.shared.impact(style: .medium)
-                        calculateCosts()
-                    }) {
-                        HStack {
-                            Image(systemName: "function")
-                            Text("计算总费用")
+                    
+                    // STEP 2 - 纱线参数（集成直接输入开关）
+                    StepCard(step: 2, title: "纱线参数", icon: "circle.grid.cross") {
+                        VStack(spacing: AppTheme.Spacing.medium) {
+                            // 经纱组
+                            VStack(spacing: AppTheme.Spacing.small) {
+                                HStack {
+                                    Text("经纱")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(AppTheme.Colors.primaryText)
+                                    Spacer()
+                                    Toggle("直接输入克重", isOn: $useDirectWarpWeight)
+                                        .font(.system(size: 12))
+                                        .toggleStyle(.switch)
+                                        .controlSize(.mini)
+                                        .fixedSize()
+                                }
+                                
+                                if useDirectWarpWeight {
+                                    CompactInputRow(
+                                        leftField: InputFieldConfig(label: "经纱重量", text: $directWarpWeight, suffix: "g/m"),
+                                        rightField: InputFieldConfig(label: "经纱纱价", text: $materials[0].warpYarnPrice, suffix: "元")
+                                    )
+                                } else {
+                                    HStack(spacing: AppTheme.Spacing.small) {
+                                        CompactYarnInputField(
+                                            yarnValue: $materials[0].warpYarnValue,
+                                            yarnTypeSelection: $materials[0].warpYarnTypeSelection,
+                                            label: "经纱"
+                                        )
+                                        CompactInputField(config: InputFieldConfig(
+                                            label: "经纱纱价",
+                                            text: $materials[0].warpYarnPrice,
+                                            suffix: "元"
+                                        ))
+                                    }
+                                }
+                            }
+                            
+                            Divider()
+                            
+                            // 纬纱组
+                            VStack(spacing: AppTheme.Spacing.small) {
+                                HStack {
+                                    Text("纬纱")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(AppTheme.Colors.primaryText)
+                                    Spacer()
+                                    Toggle("直接输入克重", isOn: $useDirectWeftWeight)
+                                        .font(.system(size: 12))
+                                        .toggleStyle(.switch)
+                                        .controlSize(.mini)
+                                        .fixedSize()
+                                }
+                                
+                                if useDirectWeftWeight {
+                                    CompactInputRow(
+                                        leftField: InputFieldConfig(label: "纬纱重量", text: $directWeftWeight, suffix: "g/m"),
+                                        rightField: InputFieldConfig(label: "纬纱纱价", text: $materials[0].weftYarnPrice, suffix: "元")
+                                    )
+                                } else {
+                                    HStack(spacing: AppTheme.Spacing.small) {
+                                        CompactYarnInputField(
+                                            yarnValue: $materials[0].weftYarnValue,
+                                            yarnTypeSelection: $materials[0].weftYarnTypeSelection,
+                                            label: "纬纱"
+                                        )
+                                        CompactInputField(config: InputFieldConfig(
+                                            label: "纬纱纱价",
+                                            text: $materials[0].weftYarnPrice,
+                                            suffix: "元"
+                                        ))
+                                    }
+                                }
+                            }
                         }
-                        .font(AppTheme.Typography.buttonText)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(AppTheme.Colors.primaryGradient)
-                        .cornerRadius(AppTheme.CornerRadius.medium)
                     }
                     
-                    HStack(spacing: AppTheme.Spacing.small) {
-                        Button(action: {
-                            HapticFeedbackManager.shared.impact(style: .medium)
-                            activeSheet = .history
-                        }) {
-                            HStack {
-                                Image(systemName: "clock.arrow.circlepath")
-                                Text("历史记录")
+                    // STEP 3 - 基础参数
+                    if !useDirectWarpWeight || !useDirectWeftWeight {
+                        StepCard(step: 3, title: "基础参数", icon: "square.grid.2x2") {
+                            VStack(spacing: AppTheme.Spacing.small) {
+                                if !useDirectWarpWeight {
+                                    CompactInputRow(
+                                        leftField: InputFieldConfig(label: "筘号", text: $boxNumber),
+                                        rightField: InputFieldConfig(label: "穿入", text: $threading)
+                                    )
+                                    CompactInputRow(
+                                        leftField: InputFieldConfig(label: "门幅", text: $fabricWidth, suffix: "cm"),
+                                        rightField: InputFieldConfig(label: "加边", text: $edgeFinishing, suffix: "cm")
+                                    )
+                                    CompactInputField(config: InputFieldConfig(
+                                        label: "织缩",
+                                        text: $fabricShrinkage
+                                    ))
+                                } else if !useDirectWeftWeight {
+                                    CompactInputRow(
+                                        leftField: InputFieldConfig(label: "门幅", text: $fabricWidth, suffix: "cm"),
+                                        rightField: InputFieldConfig(label: "加边", text: $edgeFinishing, suffix: "cm")
+                                    )
+                                }
                             }
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(AppTheme.Colors.primary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
-                                    .stroke(AppTheme.Colors.primary, lineWidth: 1.5)
-                            )
                         }
-                        
-                        Button(action: {
-                            activeSheet = .constants
-                        }) {
-                            HStack {
-                                Image(systemName: "slider.horizontal.3")
-                                Text("常量设置")
-                            }
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(AppTheme.Colors.primary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
-                                    .stroke(AppTheme.Colors.primary, lineWidth: 1.5)
+                    }
+                    
+                    // STEP 4 - 生产参数
+                    StepCard(step: useDirectWarpWeight && useDirectWeftWeight ? 3 : 4, title: "生产参数", icon: "gearshape.2") {
+                        VStack(spacing: AppTheme.Spacing.small) {
+                            CompactInputRow(
+                                leftField: InputFieldConfig(label: "下机纬密", text: $weftDensity, suffix: "根/cm"),
+                                rightField: InputFieldConfig(label: "车速", text: $machineSpeed, suffix: "RPM")
                             )
+                            CompactInputRow(
+                                leftField: InputFieldConfig(label: "效率", text: $efficiency, suffix: "%"),
+                                rightField: InputFieldConfig(label: "日工费", text: $dailyLaborCost, suffix: "元")
+                            )
+                            CompactInputField(config: InputFieldConfig(
+                                label: "牵经费用",
+                                text: $fixedCost,
+                                suffix: "元/米"
+                            ))
                         }
                     }
                 }
-                .padding(.horizontal)
+                .padding()
+                .padding(.bottom, 70)
             }
-            .padding()
+            
+            // 浮动计算按钮
+            Button(action: {
+                HapticFeedbackManager.shared.impact(style: .medium)
+                calculateCosts()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "function")
+                    Text("计算总费用")
+                }
+                .font(AppTheme.Typography.buttonText)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(AppTheme.Colors.primaryGradient)
+                .cornerRadius(AppTheme.CornerRadius.medium)
+                .shadow(color: AppTheme.Colors.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+            }
+            .padding(.horizontal, AppTheme.Spacing.large)
+            .padding(.bottom, AppTheme.Spacing.small)
+            .background(
+                LinearGradient(
+                    colors: [AppTheme.Colors.groupedBackground.opacity(0), AppTheme.Colors.groupedBackground],
+                    startPoint: .top,
+                    endPoint: .center
+                )
+                .frame(height: 90)
+                .allowsHitTesting(false)
+            )
         }
         .background(AppTheme.Colors.groupedBackground)
         .navigationTitle("单材料纱价费用计算")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: 12) {
+                    Button(action: { activeSheet = .history }) {
+                        Image(systemName: "clock.arrow.circlepath")
+                    }
+                    Button(action: { activeSheet = .constants }) {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                }
+            }
+        }
         .onChange(of: scenePhase) {
             if scenePhase == .active {
                 checkClipboardForParameters()
@@ -325,11 +331,14 @@ struct CostCalculatorView: View {
         .sheet(item: $activeSheet) { item in
             switch item {
             case .results:
-                ResultView(
-                    calculationResults: calculationResults,
-                    customerName: customerName,
-                    dismissAction: { activeSheet = nil }
-                )
+                NavigationView {
+                    if let record = lastSavedRecord {
+                        CalculationDetailView(
+                            record: record,
+                            dismissAction: { activeSheet = nil }
+                        )
+                    }
+                }
             case .constants:
                 ConstantsSheet(
                     constants: $constants,
@@ -563,6 +572,7 @@ struct CostCalculatorView: View {
             
             do {
                 try viewContext.save()
+                lastSavedRecord = newRecord
                 activeSheet = .results
             } catch {
                 let nsError = error as NSError

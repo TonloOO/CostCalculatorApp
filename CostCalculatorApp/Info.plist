@@ -6,5 +6,11 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>需要使用相机拍摄纺织品规格图片以进行智能识别</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>需要访问相册以选择纺织品规格图片进行识别</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>需要访问相册以保存计算结果截图</string>
 </dict>
 </plist>

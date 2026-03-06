@@ -21,7 +21,7 @@
 
 /* About View */
 "cost_calculator" = "成本计算器";
-"version" = "版本 1.3.0";
+"version" = "版本 1.5.0";
 "features" = "功能特色：";
 "feature_cost_calculation" = "• 纺织品成本计算";
 "feature_multi_material" = "• 多材料支持";

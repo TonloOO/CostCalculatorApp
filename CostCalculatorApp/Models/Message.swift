@@ -1,91 +1,157 @@
-//
-//  Message.swift
-//  CostCalculatorApp
-//
-//  Created by Zishuo Li on 2024-10-05.
-//
-
-
-// Models.swift
-
 import Foundation
+import UIKit
 
-struct Message: Identifiable {
+// MARK: - Local Display Models
+
+struct ChatDisplayMessage: Identifiable {
     let id: UUID
     var text: String
-    let isUser: Bool
-    let createdAt: TimeInterval
+    let role: MessageRole
+    let createdAt: Date
+    var imageData: Data?
+    var recognitionResult: TextileRecognitionResult?
+    var isRecognitionCard: Bool
+
+    init(id: UUID = UUID(), text: String, role: MessageRole, createdAt: Date = Date(),
+         imageData: Data? = nil, recognitionResult: TextileRecognitionResult? = nil,
+         isRecognitionCard: Bool = false) {
+        self.id = id
+        self.text = text
+        self.role = role
+        self.createdAt = createdAt
+        self.imageData = imageData
+        self.recognitionResult = recognitionResult
+        self.isRecognitionCard = isRecognitionCard
+    }
+
+    var isUser: Bool { role == .user }
+
+    var image: UIImage? {
+        guard let data = imageData else { return nil }
+        return UIImage(data: data)
+    }
 }
 
-struct Conversation: Identifiable {
+enum MessageRole: String {
+    case user
+    case assistant
+    case system
+}
+
+struct ChatConversationDisplay: Identifiable {
     let id: UUID
     var title: String
-    let createdAt: TimeInterval
+    let createdAt: Date
+    var updatedAt: Date
 }
 
-// API Response Models
-struct ConversationsResponse: Decodable {
-    let limit: Int
-    let has_more: Bool
-    let data: [ConversationData]
+// MARK: - LLM API Models
+
+struct LLMChatRequest: Encodable {
+    let model: String
+    let messages: [LLMMessage]
+    let stream: Bool
+    let max_tokens: Int?
+
+    init(model: String, messages: [LLMMessage], stream: Bool = true, max_tokens: Int? = nil) {
+        self.model = model
+        self.messages = messages
+        self.stream = stream
+        self.max_tokens = max_tokens
+    }
 }
 
-struct ConversationData: Decodable {
-    let id: String
-    let name: String
-    let inputs: [String: String]?
-    let introduction: String?
-    let created_at: TimeInterval
+struct LLMMessage: Encodable {
+    let role: String
+    let content: LLMContent
+
+    init(role: String, text: String) {
+        self.role = role
+        self.content = .text(text)
+    }
+
+    init(role: String, parts: [LLMContentPart]) {
+        self.role = role
+        self.content = .parts(parts)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(role, forKey: .role)
+        switch content {
+        case .text(let text):
+            try container.encode(text, forKey: .content)
+        case .parts(let parts):
+            try container.encode(parts, forKey: .content)
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case role, content
+    }
 }
 
-struct MessagesResponse: Decodable {
-    let limit: Int
-    let has_more: Bool
-    let data: [MessageData]
+enum LLMContent {
+    case text(String)
+    case parts([LLMContentPart])
 }
 
-struct MessageData: Decodable {
-    let id: String
-    let conversation_id: String
-    let inputs: [String: String]?
-    let query: String?
-    let answer: String?
-    let message_files: [MessageFile]?
-    let feedback: Feedback?
-    let retriever_resources: [RetrieverResource]?
-    let created_at: TimeInterval
-}
-
-struct MessageFile: Decodable {
-    let id: String
+struct LLMContentPart: Encodable {
     let type: String
-    let url: String
-    let belongs_to: String
+    let text: String?
+    let image_url: ImageURL?
+
+    static func textPart(_ text: String) -> LLMContentPart {
+        LLMContentPart(type: "text", text: text, image_url: nil)
+    }
+
+    static func imagePart(base64: String, mediaType: String = "image/jpeg") -> LLMContentPart {
+        LLMContentPart(
+            type: "image_url",
+            text: nil,
+            image_url: ImageURL(url: "data:\(mediaType);base64,\(base64)")
+        )
+    }
+
+    struct ImageURL: Encodable {
+        let url: String
+    }
 }
 
-struct Feedback: Decodable {
-    let rating: String
+// MARK: - LLM SSE Response Models
+
+struct LLMChatChunk: Decodable {
+    let id: String?
+    let choices: [LLMChunkChoice]?
 }
 
-struct RetrieverResource: Decodable {
-    let position: Int
-    let dataset_id: String
-    let dataset_name: String
-    let document_id: String
-    let document_name: String
-    let segment_id: String
-    let score: Double
-    let content: String
+struct LLMChunkChoice: Decodable {
+    let delta: LLMDelta?
+    let finish_reason: String?
 }
 
-struct ChunkChatCompletionResponse: Decodable {
-    let task_id: String
-    let message_id: String
-    let conversation_id: String
-    let answer: String
-    let created_at: Int
+struct LLMDelta: Decodable {
+    let role: String?
+    let content: String?
 }
 
-struct DeleteResponse: Decodable {
-    let result: String
+struct LLMChatResponse: Decodable {
+    let id: String?
+    let choices: [LLMResponseChoice]?
+    let error: LLMError?
+}
+
+struct LLMResponseChoice: Decodable {
+    let message: LLMResponseMessage?
+    let finish_reason: String?
+}
+
+struct LLMResponseMessage: Decodable {
+    let role: String?
+    let content: String?
+}
+
+struct LLMError: Decodable {
+    let message: String?
+    let type: String?
 }
