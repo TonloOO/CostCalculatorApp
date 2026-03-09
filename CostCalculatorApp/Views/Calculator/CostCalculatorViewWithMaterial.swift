@@ -116,12 +116,36 @@ struct CostCalculatorViewWithMaterial: View {
 
     
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(spacing: AppTheme.Spacing.medium) {
-                    // STEP 1 - 客户信息
+        VStack(spacing: 0) {
+            customNavHeader(
+                title: "多材料纱价计算",
+                backLabel: "费用计算",
+                dismiss: dismiss,
+                trailing: {
+                    HStack(spacing: 14) {
+                        Button(action: { activeSheet = .history }) {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 18))
+                                .foregroundColor(AppTheme.Colors.primaryText)
+                        }
+                        Button(action: { activeSheet = .constants }) {
+                            Image(systemName: "slider.horizontal.3")
+                                .font(.system(size: 18))
+                                .foregroundColor(AppTheme.Colors.primaryText)
+                        }
+                    }
+                }
+            )
+            .padding(.bottom, AppTheme.Spacing.xSmall)
+            .background(AppTheme.Colors.groupedBackground)
+            
+            ZStack(alignment: .bottom) {
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(spacing: AppTheme.Spacing.medium) {
+                        // STEP 1 - 客户信息
                     StepCard(step: 1, title: "客户信息", icon: "person.circle") {
                         CompactInputField(config: InputFieldConfig(
                             label: "客户名称/单号",
@@ -226,21 +250,9 @@ struct CostCalculatorViewWithMaterial: View {
                 .allowsHitTesting(false)
             )
         }
-        .background(AppTheme.Colors.groupedBackground)
-        .navigationTitle("多材料纱价费用计算")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 12) {
-                    Button(action: { activeSheet = .history }) {
-                        Image(systemName: "clock.arrow.circlepath")
-                    }
-                    Button(action: { activeSheet = .constants }) {
-                        Image(systemName: "slider.horizontal.3")
-                    }
-                }
-            }
+        .background(AppTheme.Colors.groupedBackground.ignoresSafeArea())
         }
+        .toolbar(.hidden, for: .navigationBar)
         .onChange(of: scenePhase) {
             if scenePhase == .active {
                 checkClipboardForParameters()

@@ -1,0 +1,156 @@
+//
+//  QuoteAPIService.swift
+//  CostCalculatorApp
+//
+//  Created by Zishuo Li on 2026-03-06.
+//
+
+import Foundation
+
+final class QuoteAPIService: ObservableObject {
+    static let shared = QuoteAPIService()
+    
+    /// Base URL for the XZX API, configurable via UserDefaults.
+    /// Defaults to localhost for simulator development.
+    @Published var baseURL: String {
+        didSet {
+            UserDefaults.standard.set(baseURL, forKey: "xzx_api_base_url")
+        }
+    }
+    
+    private init() {
+        self.baseURL = UserDefaults.standard.string(forKey: "xzx_api_base_url")
+            ?? "http://1.94.161.134:8808"
+    }
+    
+    // MARK: - Quote Overview
+    
+    func fetchQuoteOverview(
+        status: Int? = nil,
+        keyword: String? = nil,
+        page: Int = 1,
+        pageSize: Int = 50
+    ) async throws -> PaginatedResponse<QuoteOverview> {
+        var components = URLComponents(string: "\(baseURL)/api/quote-overview")!
+        var queryItems = [
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "page_size", value: "\(pageSize)")
+        ]
+        if let status = status {
+            queryItems.append(URLQueryItem(name: "status", value: "\(status)"))
+        }
+        if let keyword = keyword, !keyword.isEmpty {
+            queryItems.append(URLQueryItem(name: "keyword", value: keyword))
+        }
+        components.queryItems = queryItems
+        
+        return try await performRequest(url: components.url!)
+    }
+
+    func fetchQuoteApproval(
+        status: Int? = nil,
+        page: Int = 1,
+        pageSize: Int = 50
+    ) async throws -> PaginatedResponse<QuoteApproval> {
+        var components = URLComponents(string: "\(baseURL)/api/quote-approval")!
+        var queryItems = [
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "page_size", value: "\(pageSize)")
+        ]
+        if let status = status {
+            queryItems.append(URLQueryItem(name: "status", value: "\(status)"))
+        }
+        components.queryItems = queryItems
+
+        return try await performRequest(url: components.url!)
+    }
+
+    func performApprovalAction(
+        quoteNo: String,
+        action: QuoteApprovalAction,
+        operatorName: String
+    ) async throws -> QuoteApprovalActionResponse {
+        let encodedQuoteNo = quoteNo.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? quoteNo
+        let url = URL(string: "\(baseURL)/api/quote-approval/\(encodedQuoteNo)/action")!
+        let payload = QuoteApprovalActionRequest(action: action, operatorName: operatorName)
+        return try await performRequest(url: url, method: "POST", body: payload)
+    }
+
+    func fetchWeavePattern(quoteNo: String) async throws -> WeavePatternResponse {
+        let encodedQuoteNo = quoteNo.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? quoteNo
+        let url = URL(string: "\(baseURL)/api/quote/\(encodedQuoteNo)/weave-pattern")!
+        return try await performRequest(url: url)
+    }
+    
+    // MARK: - Health Check
+    
+    func healthCheck() async -> Bool {
+        guard let url = URL(string: "\(baseURL)/health") else { return false }
+        do {
+            let (_, response) = try await URLSession.shared.data(from: url)
+            return (response as? HTTPURLResponse)?.statusCode == 200
+        } catch {
+            return false
+        }
+    }
+    
+    // MARK: - Private
+
+    private func performRequest<T: Codable>(url: URL) async throws -> T {
+        try await performRequest(url: url, method: "GET", body: Optional<EmptyRequestBody>.none)
+    }
+    
+    private func performRequest<T: Codable, Body: Encodable>(
+        url: URL,
+        method: String = "GET",
+        body: Body? = nil
+    ) async throws -> T {
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.timeoutInterval = 15
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+
+        if let body {
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONEncoder().encode(body)
+        }
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw QuoteAPIError.invalidResponse
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw QuoteAPIError.serverError(httpResponse.statusCode, body)
+        }
+        
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            throw QuoteAPIError.decodingFailed(error.localizedDescription)
+        }
+    }
+}
+
+private struct EmptyRequestBody: Encodable {}
+
+// MARK: - Errors
+
+enum QuoteAPIError: LocalizedError {
+    case invalidResponse
+    case serverError(Int, String)
+    case decodingFailed(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse:
+            return "无效的服务器响应"
+        case .serverError(let code, let body):
+            return "服务器错误 (\(code)): \(body.prefix(200))"
+        case .decodingFailed(let detail):
+            return "数据解析失败: \(detail)"
+        }
+    }
+}

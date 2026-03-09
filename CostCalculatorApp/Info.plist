@@ -6,6 +6,11 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>需要使用相机拍摄纺织品规格图片以进行智能识别</string>
 	<key>NSPhotoLibraryUsageDescription</key>

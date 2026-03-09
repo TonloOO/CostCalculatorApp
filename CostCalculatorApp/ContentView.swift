@@ -30,7 +30,7 @@ struct ContentView: View {
             
             // Main content area
             TabView(selection: $selectedTab) {
-                CalculationHomeView()
+                HomeView()
                     .tag(Tab.home)
                 
                 ChatView()

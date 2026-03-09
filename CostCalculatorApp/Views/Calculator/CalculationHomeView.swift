@@ -9,82 +9,77 @@ import SwiftUI
 
 struct CalculationHomeView: View {
     @State private var showingHistory = false
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Background
-                AppTheme.Colors.groupedBackground
-                    .ignoresSafeArea()
-                
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: AppTheme.Spacing.large) {
-                        // Header
-                        VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
-                            Text("费用计算")
-                                .font(AppTheme.Typography.largeTitle)
-                                .foregroundColor(AppTheme.Colors.primaryText)
-                            
-                            Text("选择计算模式开始")
-                                .font(AppTheme.Typography.subheadline)
-                                .foregroundColor(AppTheme.Colors.secondaryText)
-                        }
+        VStack(spacing: 0) {
+            customNavHeader(
+                title: "费用计算",
+                backLabel: "首页",
+                dismiss: dismiss
+            )
+            .padding(.bottom, AppTheme.Spacing.xSmall)
+            .background(AppTheme.Colors.groupedBackground)
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: AppTheme.Spacing.large) {
+                    Text("选择计算模式开始")
+                        .font(AppTheme.Typography.subheadline)
+                        .foregroundColor(AppTheme.Colors.secondaryText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, AppTheme.Spacing.large)
-                        .padding(.top, AppTheme.Spacing.large)
-                        
-                        // Feature Cards
-                        VStack(spacing: AppTheme.Spacing.medium) {
-                            NavigationLink(destination: CostCalculatorView()) {
-                                FeatureCard(
-                                    title: "单材料纱价计算",
-                                    subtitle: "快速计算单一材料成本",
-                                    icon: "doc.text.magnifyingglass",
-                                    gradient: AppTheme.Colors.cardGradient1,
-                                    action: {}
-                                )
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            
-                            NavigationLink(destination: CostCalculatorViewWithMaterial()) {
-                                FeatureCard(
-                                    title: "多材料纱价计算",
-                                    subtitle: "支持多种材料组合计算",
-                                    icon: "doc.on.doc",
-                                    gradient: AppTheme.Colors.cardGradient2,
-                                    action: {}
-                                )
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            
-                            Button(action: {
-                                showingHistory = true
-                            }) {
-                                FeatureCard(
-                                    title: "历史记录",
-                                    subtitle: "查看所有计算记录",
-                                    icon: "clock.arrow.circlepath",
-                                    gradient: AppTheme.Colors.cardGradient3,
-                                    action: {}
-                                )
-                            }
-                            .buttonStyle(PlainButtonStyle())
+                    
+                    VStack(spacing: AppTheme.Spacing.medium) {
+                        NavigationLink(destination: CostCalculatorView()) {
+                            FeatureCard(
+                                title: "单材料纱价计算",
+                                subtitle: "快速计算单一材料成本",
+                                icon: "doc.text.magnifyingglass",
+                                gradient: AppTheme.Colors.cardGradient1,
+                                action: {}
+                            )
+                            .contentShape(Rectangle())
                         }
-                        .padding(.horizontal, AppTheme.Spacing.large)
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        NavigationLink(destination: CostCalculatorViewWithMaterial()) {
+                            FeatureCard(
+                                title: "多材料纱价计算",
+                                subtitle: "支持多种材料组合计算",
+                                icon: "doc.on.doc",
+                                gradient: AppTheme.Colors.cardGradient2,
+                                action: {}
+                            )
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        Button(action: {
+                            showingHistory = true
+                        }) {
+                            FeatureCard(
+                                title: "历史记录",
+                                subtitle: "查看所有计算记录",
+                                icon: "clock.arrow.circlepath",
+                                gradient: AppTheme.Colors.cardGradient3,
+                                action: {}
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .padding(.bottom, 100)
+                    .padding(.horizontal, AppTheme.Spacing.large)
                 }
+                .padding(.bottom, 100)
             }
-            .navigationBarHidden(true)
-            .sheet(isPresented: $showingHistory) {
-                NavigationView {
-                    HistoryView()
-                        .navigationBarItems(trailing: Button("关闭") {
-                            showingHistory = false
-                        })
-                }
+        }
+        .background(AppTheme.Colors.groupedBackground.ignoresSafeArea())
+        .toolbar(.hidden, for: .navigationBar)
+        .sheet(isPresented: $showingHistory) {
+            NavigationView {
+                HistoryView()
+                    .navigationBarItems(trailing: Button("关闭") {
+                        showingHistory = false
+                    })
             }
         }
     }

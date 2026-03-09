@@ -327,3 +327,38 @@ struct SectionHeader: View {
         .padding(.vertical, AppTheme.Spacing.xSmall)
     }
 }
+
+// MARK: - Custom Navigation Header
+
+/// Reusable navigation header matching the app's custom nav bar style.
+/// Use inside a ScrollView/VStack with `.toolbar(.hidden, for: .navigationBar)`.
+func customNavHeader<Trailing: View>(
+    title: String,
+    backLabel: String = "返回",
+    dismiss: DismissAction,
+    @ViewBuilder trailing: () -> Trailing = { EmptyView() }
+) -> some View {
+    VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
+        HStack {
+            Button(action: { dismiss() }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .medium))
+                    Text(backLabel)
+                        .font(AppTheme.Typography.subheadline)
+                }
+                .foregroundColor(AppTheme.Colors.primary)
+            }
+            
+            Spacer()
+            
+            trailing()
+        }
+        
+        Text(title)
+            .font(AppTheme.Typography.title2)
+            .foregroundColor(AppTheme.Colors.primaryText)
+    }
+    .padding(.horizontal, AppTheme.Spacing.large)
+    .padding(.top, AppTheme.Spacing.xSmall)
+}
