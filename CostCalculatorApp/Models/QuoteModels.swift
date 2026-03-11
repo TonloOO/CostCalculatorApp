@@ -31,8 +31,8 @@ enum QuoteStatus: Int, CaseIterable {
     var label: String {
         switch self {
         case .all: return "全部"
-        case .editing: return "编辑"
-        case .submitted: return "提交"
+        case .editing: return "编辑中"
+        case .submitted: return "已提交"
         case .approved: return "已审核"
         }
     }
@@ -52,8 +52,8 @@ enum QuoteStatus: Int, CaseIterable {
 
     init?(backendLabel: String?) {
         switch backendLabel {
-        case "编辑": self = .editing
-        case "提交": self = .submitted
+        case "编辑", "编辑中": self = .editing
+        case "提交", "已提交": self = .submitted
         case "已审核": self = .approved
         default: return nil
         }
@@ -88,11 +88,12 @@ struct QuoteOverview: Codable, Identifiable {
 }
 
 struct QuoteMaterial: Codable, Identifiable {
+    let usage: String?
     let materialName: String?
     let providerName: String?
     let unitPrice: Double?
     
-    var id: String { "\(materialName ?? "")-\(providerName ?? "")-\(unitPrice ?? 0)" }
+    var id: String { "\(usage ?? "")-\(materialName ?? "")-\(providerName ?? "")-\(unitPrice ?? 0)" }
 }
 
 // MARK: - Quote Approval
@@ -173,11 +174,16 @@ struct QuoteApprovalActionResponse: Codable {
 
 extension QuoteApprovalActionResponse {
     var summaryText: String {
-        if orderSyncTriggered {
-            return "\(quoteNo) 已从\(previousStatus)变更为\(currentStatus)，并已触发订单同步"
+        switch action {
+        case .submit:
+            return "提交成功"
+        case .approve:
+            return "审批成功"
+        case .reject:
+            return "驳回成功"
+        case .revoke:
+            return "撤销成功"
         }
-
-        return "\(quoteNo) 已从\(previousStatus)变更为\(currentStatus)"
     }
 }
 

@@ -77,8 +77,8 @@ struct QuoteDetailView: View {
 
                 Spacer()
 
-                if let status = d.status {
-                    Text(status)
+                if let statusText = d.normalizedStatus?.label ?? d.status {
+                    Text(statusText)
                         .font(AppTheme.Typography.footnote)
                         .fontWeight(.semibold)
                         .foregroundColor(statusColor(d.normalizedStatus))
@@ -260,7 +260,7 @@ struct QuoteDetailView: View {
                         }
 
                         HStack(spacing: AppTheme.Spacing.medium) {
-                            materialMetric("D数", fmtDec(m.denierNum))
+                            materialMetric(materialSpecLabel(for: m), materialSpecValue(for: m))
                             materialMetric("用纱量", fmtDec(m.yarnUseQty))
                             materialMetric("根数", fmtDec(m.yarnQty))
                             materialMetric("用量kg", fmtDec(m.orderYarnQty))
@@ -407,6 +407,22 @@ struct QuoteDetailView: View {
         guard let v else { return "-" }
         return String(format: "%.0f", v)
     }
+
+    private func materialSpecLabel(for material: QuoteDetailMaterial) -> String {
+        if let yarnCount = material.yarnCount?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !yarnCount.isEmpty {
+            return "纱支"
+        }
+        return "D数"
+    }
+
+    private func materialSpecValue(for material: QuoteDetailMaterial) -> String {
+        if let yarnCount = material.yarnCount?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !yarnCount.isEmpty {
+            return yarnCount
+        }
+        return fmtDec(material.denierNum)
+    }
 }
 
 // MARK: - Reusable Section Components
@@ -525,6 +541,7 @@ final class QuoteDetailViewModel: ObservableObject {
             materials: materials,
             constants: constants,
             calculationResults: calcResults,
+            warpEndsOverride: d.beamTotalEnd.map { "\($0)" } ?? "",
             alertMessage: &alertMsg
         )
 
@@ -543,57 +560,34 @@ final class QuoteDetailViewModel: ObservableObject {
         }
     }
 
-    /// Group detail materials by name, combining warp/weft rows into Calculator Material objects.
+    /// Preserve each detail row's warp/weft ownership so recalculation keeps direction-specific materials separate.
     private func buildMaterials(from d: QuoteDetail) -> [Material] {
         guard let dtlMaterials = d.materials, !dtlMaterials.isEmpty else { return [] }
 
-        struct GroupedEntry {
-            var name: String
-            var warpD: Double = 0
-            var weftD: Double = 0
-            var warpPrice: Double = 0
-            var weftPrice: Double = 0
-            var warpQty: Double = 0
-            var weftQty: Double = 0
-        }
+        var result = dtlMaterials.compactMap { materialRow -> Material? in
+            let isWarp = materialRow.usage?.contains("经") == true
+            let labelPrefix = isWarp ? "经纱" : "纬纱"
+            let displayName = [labelPrefix, materialRow.materialName]
+                .compactMap { value in
+                    guard let value, !value.isEmpty else { return nil }
+                    return value
+                }
+                .joined(separator: " · ")
+            let yarnSpec = normalizedYarnSpec(for: materialRow)
+            let yarnType = resolvedYarnType(for: materialRow)
+            let price = resolvedMaterialPrice(for: materialRow)
+            let ratio = resolvedMaterialRatio(for: materialRow)
 
-        var groups: [String: GroupedEntry] = [:]
-        var order: [String] = []
-
-        for m in dtlMaterials {
-            let key = m.materialName ?? "unknown"
-            if groups[key] == nil {
-                groups[key] = GroupedEntry(name: key)
-                order.append(key)
-            }
-            let isWarp = m.usage?.contains("经") == true
-            let dVal = m.denierNum ?? 0
-            let price = m.unitPrice ?? 0
-            let qty = max(m.yarnQty ?? 1, 1)
-
-            if isWarp {
-                groups[key]!.warpD = dVal
-                groups[key]!.warpPrice = price
-                groups[key]!.warpQty = qty
-            } else {
-                groups[key]!.weftD = dVal
-                groups[key]!.weftPrice = price
-                groups[key]!.weftQty = qty
-            }
-        }
-
-        var result = order.compactMap { key -> Material? in
-            guard let g = groups[key] else { return nil }
             return Material(
-                name: g.name,
-                warpYarnValue: String(format: "%.2f", g.warpD),
-                warpYarnTypeSelection: .dNumber,
-                weftYarnValue: String(format: "%.2f", g.weftD),
-                weftYarnTypeSelection: .dNumber,
-                warpYarnPrice: String(format: "%.2f", g.warpPrice),
-                weftYarnPrice: String(format: "%.2f", g.weftPrice),
-                warpRatio: g.warpQty > 0 ? String(format: "%.0f", g.warpQty) : "0",
-                weftRatio: g.weftQty > 0 ? String(format: "%.0f", g.weftQty) : "0",
+                name: displayName.isEmpty ? labelPrefix : displayName,
+                warpYarnValue: isWarp ? yarnSpec : "0",
+                warpYarnTypeSelection: isWarp ? yarnType : .dNumber,
+                weftYarnValue: isWarp ? "0" : yarnSpec,
+                weftYarnTypeSelection: isWarp ? .dNumber : yarnType,
+                warpYarnPrice: isWarp ? price : "0",
+                weftYarnPrice: isWarp ? "0" : price,
+                warpRatio: isWarp ? ratio : "0",
+                weftRatio: isWarp ? "0" : ratio,
                 ratio: "1"
             )
         }
@@ -612,6 +606,48 @@ final class QuoteDetailViewModel: ObservableObject {
         }
 
         return result
+    }
+
+    private func resolvedYarnType(for material: QuoteDetailMaterial) -> YarnType {
+        if let yarnCount = material.yarnCount?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !yarnCount.isEmpty,
+           (material.denierNum == nil || material.denierNum == 0) {
+            return .yarnCount
+        }
+
+        return .dNumber
+    }
+
+    private func normalizedYarnSpec(for material: QuoteDetailMaterial) -> String {
+        switch resolvedYarnType(for: material) {
+        case .dNumber:
+            let value = material.denierNum ?? 0
+            return String(format: "%.2f", value)
+        case .yarnCount:
+            let count = material.yarnCount?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return count.isEmpty ? "0" : count
+        }
+    }
+
+    private func resolvedMaterialPrice(for material: QuoteDetailMaterial) -> String {
+        let unitPrice = material.unitPrice ?? 0
+        let yarnPrice = material.yarnPrice ?? 0
+        let chosenPrice = unitPrice > 0 ? unitPrice : yarnPrice
+        return String(format: "%.2f", chosenPrice)
+    }
+
+    private func resolvedMaterialRatio(for material: QuoteDetailMaterial) -> String {
+        let candidates = [
+            material.yarnQty,
+            material.yarnUseQty,
+            material.orderYarnQty
+        ]
+
+        if let firstPositive = candidates.compactMap({ $0 }).first(where: { $0 > 0 }) {
+            return String(format: "%.4f", firstPositive)
+        }
+
+        return "1"
     }
 
     private func fmt(_ v: Double?) -> String {

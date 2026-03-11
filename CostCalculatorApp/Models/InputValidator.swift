@@ -118,7 +118,8 @@ struct InputValidator {
         useDirectWarpWeight: Bool,
         directWarpWeight: String,
         useDirectWeftWeight: Bool,
-        directWeftWeight: String
+        directWeftWeight: String,
+        warpEndsOverride: String = ""
     ) -> ValidationResult {
         
         var validations: [(String, String)] = []
@@ -131,8 +132,11 @@ struct InputValidator {
         
         // Add warp-related validations if not using direct weight
         if !useDirectWarpWeight {
-            validations.append((boxNumber, "筘号"))
-            validations.append((threading, "穿入值"))
+            let hasWarpEndsOverride = (Double(warpEndsOverride) ?? 0) > 0
+            if !hasWarpEndsOverride {
+                validations.append((boxNumber, "筘号"))
+                validations.append((threading, "穿入值"))
+            }
             validations.append((fabricWidth, "门幅"))
             validations.append((edgeFinishing, "加边"))
             validations.append((fabricShrinkage, "织缩"))

@@ -47,7 +47,12 @@ struct QuoteOverviewView: View {
                     overviewList
                 }
             }
+
+            if viewModel.isLoading, !viewModel.quotes.isEmpty {
+                loadingOverlay
+            }
         }
+        .disabled(viewModel.isLoading && !viewModel.quotes.isEmpty)
         .task {
             if viewModel.quotes.isEmpty {
                 await viewModel.loadData()
@@ -61,6 +66,28 @@ struct QuoteOverviewView: View {
         } message: {
             Text(viewModel.actionMessage ?? "")
         }
+    }
+
+    private var loadingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.06)
+                .ignoresSafeArea()
+
+            HStack(spacing: AppTheme.Spacing.small) {
+                ProgressView()
+                    .tint(AppTheme.Colors.primary)
+
+                Text("加载中...")
+                    .font(AppTheme.Typography.footnote)
+                    .foregroundColor(AppTheme.Colors.primaryText)
+            }
+            .padding(.horizontal, AppTheme.Spacing.medium)
+            .padding(.vertical, AppTheme.Spacing.small)
+            .background(AppTheme.Colors.background)
+            .cornerRadius(AppTheme.CornerRadius.medium)
+            .shadow(color: AppTheme.Colors.shadow, radius: 8, x: 0, y: 4)
+        }
+        .transition(.opacity)
     }
     
     // MARK: - Search & Filter
@@ -111,6 +138,7 @@ struct QuoteOverviewView: View {
         }
         .padding(.vertical, AppTheme.Spacing.small)
         .background(AppTheme.Colors.background)
+        .allowsHitTesting(!(viewModel.isLoading && !viewModel.quotes.isEmpty))
         .sheet(isPresented: $showCustomDatePicker) {
             CustomDateRangeSheet(viewModel: viewModel)
         }
@@ -297,24 +325,6 @@ struct QuoteOverviewCard: View {
         .sheet(isPresented: $showDetail) {
             QuoteDetailView(quoteNo: quote.quoteNo)
         }
-        .confirmationDialog(
-            pendingAction?.label ?? "",
-            isPresented: Binding(
-                get: { pendingAction != nil },
-                set: { if !$0 { pendingAction = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            if let action = pendingAction {
-                Button(action.label) {
-                    onAction(action)
-                    pendingAction = nil
-                }
-            }
-            Button("取消", role: .cancel) { pendingAction = nil }
-        } message: {
-            Text("确认对 \(quote.quoteNo) 执行该操作？")
-        }
     }
     
     // MARK: - Header
@@ -323,7 +333,7 @@ struct QuoteOverviewCard: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.xxSmall) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(quote.quoteNo)
+                    Text(quote.materialNo ?? "-")
                         .font(AppTheme.Typography.headline)
                         .foregroundColor(AppTheme.Colors.primaryText)
                     
@@ -331,10 +341,10 @@ struct QuoteOverviewCard: View {
                         Text(materialName)
                             .font(AppTheme.Typography.caption1)
                             .foregroundColor(AppTheme.Colors.secondaryText)
-                    } else if let materialNo = quote.materialNo, !materialNo.isEmpty {
-                        Text(materialNo)
+                    } else {
+                        Text(" ")
                             .font(AppTheme.Typography.caption1)
-                            .foregroundColor(AppTheme.Colors.primary)
+                            .foregroundColor(.clear)
                     }
                 }
                 
@@ -427,9 +437,7 @@ struct QuoteOverviewCard: View {
                     
                     ForEach(materials) { material in
                         HStack {
-                            Circle()
-                                .fill(AppTheme.Colors.primary.opacity(0.6))
-                                .frame(width: 6, height: 6)
+                            usageBadge(material.usage)
                             
                             Text(material.materialName ?? "-")
                                 .font(AppTheme.Typography.footnote)
@@ -485,6 +493,28 @@ struct QuoteOverviewCard: View {
                     .cornerRadius(AppTheme.CornerRadius.small)
                 }
                 .disabled(isSubmitting)
+                .confirmationDialog(
+                    action.label,
+                    isPresented: Binding(
+                        get: { pendingAction == action },
+                        set: { isPresented in
+                            if !isPresented, pendingAction == action {
+                                pendingAction = nil
+                            }
+                        }
+                    ),
+                    titleVisibility: .visible
+                ) {
+                    Button(action.label) {
+                        onAction(action)
+                        pendingAction = nil
+                    }
+                    Button("取消", role: .cancel) {
+                        pendingAction = nil
+                    }
+                } message: {
+                    Text("确认对 \(quote.quoteNo) 执行该操作？")
+                }
             }
         }
         .padding(AppTheme.Spacing.medium)
@@ -514,6 +544,28 @@ struct QuoteOverviewCard: View {
     }
 
     // MARK: - Helpers
+
+    @ViewBuilder
+    private func usageBadge(_ usage: String?) -> some View {
+        let isWarp = usage?.contains("经") == true
+
+        if let usage, !usage.isEmpty {
+            Text(usage)
+                .font(AppTheme.Typography.caption2)
+                .fontWeight(.medium)
+                .foregroundColor(isWarp ? AppTheme.Colors.primary : AppTheme.Colors.accent)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    (isWarp ? AppTheme.Colors.primary : AppTheme.Colors.accent).opacity(0.12)
+                )
+                .cornerRadius(4)
+        } else {
+            Circle()
+                .fill(AppTheme.Colors.primary.opacity(0.6))
+                .frame(width: 6, height: 6)
+        }
+    }
 
     private func actionColor(for action: QuoteApprovalAction) -> Color {
         switch action {

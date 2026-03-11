@@ -43,6 +43,7 @@ struct Calculator {
         directWarpWeight: String = "",
         useDirectWeftWeight: Bool = false,
         directWeftWeight: String = "",
+        warpEndsOverride: String = "",
         alertMessage: inout String
     ) -> Bool {
         
@@ -68,7 +69,8 @@ struct Calculator {
             useDirectWarpWeight: useDirectWarpWeight,
             directWarpWeight: directWarpWeight,
             useDirectWeftWeight: useDirectWeftWeight,
-            directWeftWeight: directWeftWeight
+            directWeftWeight: directWeftWeight,
+            warpEndsOverride: warpEndsOverride
         )
         if case .failure(let message) = basicValidation {
             alertMessage = message
@@ -88,7 +90,8 @@ struct Calculator {
             dailyLaborCost: dailyLaborCost,
             fixedCost: fixedCost,
             useDirectWarpWeight: useDirectWarpWeight,
-            useDirectWeftWeight: useDirectWeftWeight
+            useDirectWeftWeight: useDirectWeftWeight,
+            warpEndsOverride: warpEndsOverride
         ) else {
             alertMessage = "输入验证失败。"
             return false
@@ -139,6 +142,7 @@ struct Calculator {
         let efficiency: Double
         let dailyLaborCost: Double
         let fixedCost: Double
+        let warpEndsOverride: Double?
         
         var actualFabricWidth: Double {
             fabricWidth + edgeFinishing
@@ -166,7 +170,8 @@ struct Calculator {
         dailyLaborCost: String,
         fixedCost: String,
         useDirectWarpWeight: Bool = false,
-        useDirectWeftWeight: Bool = false
+        useDirectWeftWeight: Bool = false,
+        warpEndsOverride: String = ""
     ) -> ValidatedValues? {
         
         // Always required values
@@ -184,18 +189,23 @@ struct Calculator {
         var edgeFinishingValue: Double = 0
         var fabricShrinkageValue: Double = 0
         var weftDensityValue: Double = 0
+        let warpEndsOverrideValue = Double(warpEndsOverride).flatMap { $0 > 0 ? $0 : nil }
         
         // Warp-related values (only needed if not using direct warp weight)
         if !useDirectWarpWeight {
-            guard let boxNum = Double(boxNumber.isEmpty ? "0" : boxNumber),
-                  let threadingNum = Double(threading.isEmpty ? "0" : threading),
-                  let fabricWidthNum = Double(fabricWidth.isEmpty ? "0" : fabricWidth),
+            guard let fabricWidthNum = Double(fabricWidth.isEmpty ? "0" : fabricWidth),
                   let edgeFinishingNum = Double(edgeFinishing.isEmpty ? "0" : edgeFinishing),
                   let fabricShrinkageNum = Double(fabricShrinkage.isEmpty ? "0" : fabricShrinkage) else {
                 return nil
             }
-            boxNumberValue = boxNum
-            threadingValue = threadingNum
+            if warpEndsOverrideValue == nil {
+                guard let boxNum = Double(boxNumber.isEmpty ? "0" : boxNumber),
+                      let threadingNum = Double(threading.isEmpty ? "0" : threading) else {
+                    return nil
+                }
+                boxNumberValue = boxNum
+                threadingValue = threadingNum
+            }
             fabricWidthValue = fabricWidthNum
             edgeFinishingValue = edgeFinishingNum
             fabricShrinkageValue = fabricShrinkageNum
@@ -228,7 +238,8 @@ struct Calculator {
             machineSpeed: machineSpeedValue,
             efficiency: efficiencyValue,
             dailyLaborCost: laborCostValue,
-            fixedCost: fixedCostValue
+            fixedCost: fixedCostValue,
+            warpEndsOverride: warpEndsOverrideValue
         )
     }
     
@@ -387,7 +398,8 @@ struct Calculator {
         if useDirectWarpWeight, let directWarpWeightValue = Double(directWarpWeight) {
             warpWeight = directWarpWeightValue * warpRatioFraction
         } else {
-            let warpEnds = validatedValues.boxNumber * validatedValues.threading * validatedValues.actualFabricWidth
+            let warpEnds = validatedValues.warpEndsOverride
+                ?? (validatedValues.boxNumber * validatedValues.threading * validatedValues.fabricWidth)
             warpWeight = (warpEnds * warpDValue * validatedValues.fabricShrinkage) / constants.warpDivider * warpRatioFraction
         }
         let warpCost = (warpWeight * warpYarnPriceValue) / 1000
@@ -447,4 +459,3 @@ struct Calculator {
         calculationResults.totalCost = calculationResults.warpCost + calculationResults.weftCost + calculationResults.warpingCost + calculationResults.laborCost
     }
 }
-
