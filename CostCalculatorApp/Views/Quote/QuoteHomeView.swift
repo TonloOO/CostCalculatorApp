@@ -12,20 +12,22 @@ struct QuoteHomeView: View {
     @StateObject private var authManager = QuoteAuthManager.shared
     @State private var isServerOnline = false
     @State private var showSettings = false
-    @State private var selectedTab: QuoteModuleTab = .overview
+    @State private var showCreateQuote = false
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack(spacing: 0) {
             quoteHeader
             connectionStatusBar
-            moduleTabBar
-            currentModuleView
+            QuoteOverviewView()
         }
         .background(AppTheme.Colors.groupedBackground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showSettings) {
             APISettingsView()
+        }
+        .sheet(isPresented: $showCreateQuote) {
+            QuoteCreateView()
         }
         .task {
             isServerOnline = await apiService.healthCheck()
@@ -39,6 +41,12 @@ struct QuoteHomeView: View {
             dismiss: dismiss,
             trailing: {
                 HStack(spacing: AppTheme.Spacing.medium) {
+                    Button(action: { showCreateQuote = true }) {
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 18))
+                            .foregroundStyle(AppTheme.Colors.primaryGradient)
+                    }
+
                     Button(action: { showSettings = true }) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 18))
@@ -82,53 +90,6 @@ struct QuoteHomeView: View {
         )
     }
 
-    private var moduleTabBar: some View {
-        HStack(spacing: AppTheme.Spacing.small) {
-            ForEach(QuoteModuleTab.allCases, id: \.self) { tab in
-                Button {
-                    selectedTab = tab
-                } label: {
-                    Text(tab.title)
-                        .font(AppTheme.Typography.footnote)
-                        .fontWeight(selectedTab == tab ? .semibold : .regular)
-                        .foregroundColor(selectedTab == tab ? .white : AppTheme.Colors.primaryText)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, AppTheme.Spacing.small)
-                        .background(
-                            selectedTab == tab
-                                ? AnyShapeStyle(AppTheme.Colors.primaryGradient)
-                                : AnyShapeStyle(AppTheme.Colors.secondaryBackground)
-                        )
-                        .clipShape(Capsule())
-                }
-            }
-        }
-        .padding(.horizontal, AppTheme.Spacing.medium)
-        .padding(.vertical, AppTheme.Spacing.small)
-        .background(AppTheme.Colors.background)
-    }
-
-    @ViewBuilder
-    private var currentModuleView: some View {
-        switch selectedTab {
-        case .overview:
-            QuoteOverviewView()
-        case .approval:
-            QuoteApprovalView()
-        }
-    }
-}
-
-enum QuoteModuleTab: CaseIterable {
-    case overview
-    case approval
-
-    var title: String {
-        switch self {
-        case .overview: return "报价概览"
-        case .approval: return "审批列表"
-        }
-    }
 }
 
 // MARK: - API Settings

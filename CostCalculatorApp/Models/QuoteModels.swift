@@ -66,6 +66,7 @@ struct QuoteOverview: Codable, Identifiable {
     let quoteNo: String
     let customerName: String?
     let materialNo: String?
+    let materialName: String?
     let beamTotalEnd: Int?
     let width: Double?
     let orderQty: Double?
@@ -74,9 +75,16 @@ struct QuoteOverview: Codable, Identifiable {
     let price: Double?
     let weaveDayOutput: Double?
     let quoteTime: String?
+    let status: String?
+    let costPrice: Double?
+    let profitRate: Double?
     let materials: [QuoteMaterial]?
     
     var id: String { quoteNo }
+
+    var normalizedStatus: QuoteStatus? {
+        QuoteStatus(backendLabel: status)
+    }
 }
 
 struct QuoteMaterial: Codable, Identifiable {
@@ -171,6 +179,246 @@ extension QuoteApprovalActionResponse {
 
         return "\(quoteNo) 已从\(previousStatus)变更为\(currentStatus)"
     }
+}
+
+// MARK: - Quote Detail
+
+struct QuoteDetail: Codable {
+    let quoteNo: String
+    let customerName: String?
+    let materialNo: String?
+    let materialName: String?
+    let orderType: String?
+    let balanceType: String?
+    let salesName: String?
+    let linkMan: String?
+    let remark: String?
+    let status: String?
+    let quoteTime: String?
+    let deliveryDate: String?
+
+    let width: Double?
+    let reedId: Double?
+    let fastenerRange: Double?
+    let sideLength: Double?
+    let warpWastagePercent: Double?
+    let beamTotalEnd: Int?
+    let warpDensity: Double?
+    let weftDensity: Double?
+
+    let orderQty: Double?
+
+    let price: Double?
+    let costPrice: Double?
+    let yarnPrice: Double?
+    let weavePrice: Double?
+    let sizingPrice: Double?
+    let sandingPrice: Double?
+    let sampleCost: Double?
+    let stdWeavePrice: Double?
+
+    let weaveSpeed: Double?
+    let weaveEff: Double?
+    let weaveDayOutput: Double?
+    let weaveDaySaleCost: Double?
+
+    let dyeCost: Double?
+    let sizingCost: Double?
+    let weaveCost: Double?
+    let finishCost: Double?
+    let testCost: Double?
+    let yarnCost: Double?
+    let otherCost: Double?
+    let repairCost: Double?
+    let managerCost: Double?
+    let traficCost: Double?
+    let packageCost: Double?
+    let traficPrice: Double?
+
+    let profitRate: Double?
+    let sizingProviderName: String?
+    let currency: String?
+    let amount: Double?
+    let finallyPrice: Double?
+
+    let materials: [QuoteDetailMaterial]?
+    let finishDetails: [QuoteDetailFinish]?
+
+    var normalizedStatus: QuoteStatus? {
+        QuoteStatus(backendLabel: status)
+    }
+}
+
+struct QuoteDetailMaterial: Codable, Identifiable {
+    let rowNo: Int?
+    let usage: String?
+    let materialNo: String?
+    let materialName: String?
+    let denierNum: Double?
+    let yarnUseQty: Double?
+    let yarnQty: Double?
+    let orderYarnQty: Double?
+    let providerName: String?
+    let unitPrice: Double?
+    let yarnPrice: Double?
+    let yarnAmount: Double?
+    let dtlYarnCost: Double?
+    let yarnCount: String?
+    let remark: String?
+
+    var id: Int { rowNo ?? 0 }
+}
+
+struct QuoteDetailFinish: Codable, Identifiable {
+    let finishMode: String?
+    let count: Int?
+    let price: Double?
+    let amount: Double?
+
+    var id: String { finishMode ?? UUID().uuidString }
+}
+
+// MARK: - Reference Data
+
+struct CustomerRef: Codable, Identifiable, Hashable {
+    let guid: String
+    let code: String?
+    let name: String
+    let abbName: String?
+    let contactPerson: String?
+
+    var id: String { guid }
+}
+
+struct SalespersonRef: Codable, Identifiable, Hashable {
+    let guid: String
+    let salesNo: String?
+    let salesName: String
+    let groupName: String?
+    let groupGuid: String?
+
+    var id: String { guid }
+}
+
+struct SupplierRef: Codable, Identifiable, Hashable {
+    let guid: String
+    let code: String?
+    let name: String
+
+    var id: String { guid }
+}
+
+struct DictionaryItem: Codable, Identifiable, Hashable {
+    let code: String
+    let name: String
+
+    var id: String { code }
+}
+
+struct MaterialRef: Codable, Identifiable, Hashable {
+    let guid: String
+    let materialNo: String?
+    let materialName: String?
+    let component: String?
+    let width: Double?
+    let warpDensity: Double?
+    let weftDensity: Double?
+    let beamTotalEnd: Int?
+    let warpWastagePercent: Double?
+    let category: String?
+    let reedId: Double?
+    let fastenerRange: Double?
+    let reedType: String?
+    let weaveSpeed: Double?
+    let weaveEff: Double?
+    let weaveDayOutput: Double?
+    let weavePrice: Double?
+    let sizingPrice: Double?
+    let weaveDayCost: Double?
+
+    var id: String { guid }
+
+    var displayLabel: String {
+        let no = materialNo ?? ""
+        let name = materialName ?? ""
+        if no.isEmpty { return name }
+        if name.isEmpty { return no }
+        return "\(no) · \(name)"
+    }
+}
+
+// MARK: - Quote Creation
+
+struct QuoteCreateMaterialRow: Codable {
+    var materialNo: String?
+    var materialName: String?
+    var usage: String
+    var denierNum: Double?
+    var yarnQty: Double?
+    var unitPrice: Double?
+    var yarnPrice: Double?
+    var providerNo: String?
+    var providerName: String?
+    var yarnCount: String?
+    var remark: String?
+}
+
+struct QuoteCreateFinishRow: Codable {
+    var finishMode: String
+    var count: Int?
+    var price: Double?
+    var amount: Double?
+}
+
+struct QuoteCreateRequest: Codable {
+    let customerName: String
+    let customerGuid: String?
+    let linkMan: String?
+    let salesGuid: String?
+    let salesName: String?
+    let salesGroupGuid: String?
+    let source: String?
+    let materialNo: String?
+    let materialName: String?
+    let materialGuid: String?
+    let materialTypeName: String?
+    let weaveType: String?
+    let width: Double?
+    let beamTotalEnd: Int?
+    let warpDensity: Double?
+    let weftDensity: Double?
+    let warpWastagePercent: Double?
+    let reedId: Double?
+    let fastenerRange: Double?
+    let reedType: String?
+    let sideLength: Double?
+    let weaveSpeed: Double?
+    let weaveEff: Double?
+    let weaveDayOutput: Double?
+    let weaveDayCost: Double?
+    let weaveDaySaleCost: Double?
+    let weavePrice: Double?
+    let sizingPrice: Double?
+    let sandingPrice: Double?
+    let stdWeavePrice: Double?
+    let sampleCost: Double?
+    let orderQty: Double?
+    let orderType: String?
+    let balanceType: String?
+    let currency: String?
+    let deliveryDate: String?
+    let profitRate: Double?
+    let sizingProviderName: String?
+    let sizingProviderGuid: String?
+    let remark: String?
+    let creator: String
+    let materials: [QuoteCreateMaterialRow]
+    let finishDetails: [QuoteCreateFinishRow]
+}
+
+struct QuoteCreateResponse: Codable {
+    let quoteNo: String
+    let guid: String
 }
 
 // MARK: - Weave Pattern

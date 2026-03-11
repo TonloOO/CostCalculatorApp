@@ -148,21 +148,26 @@ struct QuoteLoginView: View {
     private var loginButton: some View {
         Button(action: performLogin) {
             HStack {
-                Image(systemName: "arrow.right.circle.fill")
-                Text("登录")
+                if authManager.isLoading {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Image(systemName: "arrow.right.circle.fill")
+                }
+                Text(authManager.isLoading ? "登录中..." : "登录")
                     .fontWeight(.semibold)
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, AppTheme.Spacing.medium)
             .background(
-                (username.isEmpty || password.isEmpty)
+                (username.isEmpty || password.isEmpty || authManager.isLoading)
                     ? AnyShapeStyle(Color.gray.opacity(0.4))
                     : AnyShapeStyle(AppTheme.Colors.primaryGradient)
             )
             .cornerRadius(AppTheme.CornerRadius.medium)
         }
-        .disabled(username.isEmpty || password.isEmpty)
+        .disabled(username.isEmpty || password.isEmpty || authManager.isLoading)
     }
     
     // MARK: - Action
@@ -170,15 +175,21 @@ struct QuoteLoginView: View {
     private func performLogin() {
         focusedField = nil
         errorMessage = nil
+        authManager.isLoading = true
         
-        let result = authManager.login(username: username, password: password)
-        switch result {
-        case .success:
-            HapticFeedbackManager.shared.notification(type: .success)
-        case .failure(let error):
-            errorMessage = error.localizedDescription
-            HapticFeedbackManager.shared.notification(type: .error)
-            isShaking.toggle()
+        Task {
+            let result = await authManager.login(username: username, password: password)
+            await MainActor.run {
+                authManager.isLoading = false
+                switch result {
+                case .success:
+                    HapticFeedbackManager.shared.notification(type: .success)
+                case .failure(let error):
+                    errorMessage = error.localizedDescription
+                    HapticFeedbackManager.shared.notification(type: .error)
+                    isShaking.toggle()
+                }
+            }
         }
     }
 }

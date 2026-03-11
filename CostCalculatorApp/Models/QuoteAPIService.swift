@@ -28,6 +28,8 @@ final class QuoteAPIService: ObservableObject {
     func fetchQuoteOverview(
         status: Int? = nil,
         keyword: String? = nil,
+        dateFrom: String? = nil,
+        dateTo: String? = nil,
         page: Int = 1,
         pageSize: Int = 50
     ) async throws -> PaginatedResponse<QuoteOverview> {
@@ -41,6 +43,12 @@ final class QuoteAPIService: ObservableObject {
         }
         if let keyword = keyword, !keyword.isEmpty {
             queryItems.append(URLQueryItem(name: "keyword", value: keyword))
+        }
+        if let dateFrom = dateFrom {
+            queryItems.append(URLQueryItem(name: "date_from", value: dateFrom))
+        }
+        if let dateTo = dateTo {
+            queryItems.append(URLQueryItem(name: "date_to", value: dateTo))
         }
         components.queryItems = queryItems
         
@@ -74,6 +82,56 @@ final class QuoteAPIService: ObservableObject {
         let url = URL(string: "\(baseURL)/api/quote-approval/\(encodedQuoteNo)/action")!
         let payload = QuoteApprovalActionRequest(action: action, operatorName: operatorName)
         return try await performRequest(url: url, method: "POST", body: payload)
+    }
+
+    func fetchQuoteDetail(quoteNo: String) async throws -> QuoteDetail {
+        let encodedQuoteNo = quoteNo.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? quoteNo
+        let url = URL(string: "\(baseURL)/api/quote/\(encodedQuoteNo)/detail")!
+        return try await performRequest(url: url)
+    }
+
+    // MARK: - Reference Data
+
+    func searchCustomers(keyword: String) async throws -> [CustomerRef] {
+        var components = URLComponents(string: "\(baseURL)/api/reference/customers")!
+        components.queryItems = [URLQueryItem(name: "keyword", value: keyword)]
+        return try await performRequest(url: components.url!)
+    }
+
+    func fetchSalespeople() async throws -> [SalespersonRef] {
+        let url = URL(string: "\(baseURL)/api/reference/salespeople")!
+        return try await performRequest(url: url)
+    }
+
+    func searchSuppliers(keyword: String) async throws -> [SupplierRef] {
+        var components = URLComponents(string: "\(baseURL)/api/reference/suppliers")!
+        components.queryItems = [URLQueryItem(name: "keyword", value: keyword)]
+        return try await performRequest(url: components.url!)
+    }
+
+    func searchSizingProviders(keyword: String) async throws -> [SupplierRef] {
+        var components = URLComponents(string: "\(baseURL)/api/reference/sizing-providers")!
+        components.queryItems = [URLQueryItem(name: "keyword", value: keyword)]
+        return try await performRequest(url: components.url!)
+    }
+
+    func searchMaterials(keyword: String) async throws -> [MaterialRef] {
+        var components = URLComponents(string: "\(baseURL)/api/reference/materials")!
+        components.queryItems = [URLQueryItem(name: "keyword", value: keyword)]
+        return try await performRequest(url: components.url!)
+    }
+
+    func fetchDictionary(typeCode: String) async throws -> [DictionaryItem] {
+        let encoded = typeCode.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? typeCode
+        let url = URL(string: "\(baseURL)/api/reference/dictionary/\(encoded)")!
+        return try await performRequest(url: url)
+    }
+
+    // MARK: - Quote Creation
+
+    func createQuote(_ request: QuoteCreateRequest) async throws -> QuoteCreateResponse {
+        let url = URL(string: "\(baseURL)/api/quote")!
+        return try await performRequest(url: url, method: "POST", body: request)
     }
 
     func fetchWeavePattern(quoteNo: String) async throws -> WeavePatternResponse {
@@ -110,6 +168,10 @@ final class QuoteAPIService: ObservableObject {
         request.timeoutInterval = 15
         request.addValue("application/json", forHTTPHeaderField: "Accept")
 
+        if let token = QuoteAuthManager.shared.authToken {
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
         if let body {
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONEncoder().encode(body)
@@ -121,6 +183,11 @@ final class QuoteAPIService: ObservableObject {
             throw QuoteAPIError.invalidResponse
         }
         
+        if httpResponse.statusCode == 401 {
+            await MainActor.run { QuoteAuthManager.shared.logout() }
+            throw QuoteAPIError.unauthorized
+        }
+
         guard (200...299).contains(httpResponse.statusCode) else {
             let body = String(data: data, encoding: .utf8) ?? ""
             throw QuoteAPIError.serverError(httpResponse.statusCode, body)
@@ -140,6 +207,7 @@ private struct EmptyRequestBody: Encodable {}
 
 enum QuoteAPIError: LocalizedError {
     case invalidResponse
+    case unauthorized
     case serverError(Int, String)
     case decodingFailed(String)
     
@@ -147,6 +215,8 @@ enum QuoteAPIError: LocalizedError {
         switch self {
         case .invalidResponse:
             return "无效的服务器响应"
+        case .unauthorized:
+            return "登录已过期，请重新登录"
         case .serverError(let code, let body):
             return "服务器错误 (\(code)): \(body.prefix(200))"
         case .decodingFailed(let detail):

@@ -17,7 +17,14 @@ struct QuoteOverviewView: View {
             
             VStack(spacing: 0) {
                 searchAndFilterBar
-                
+
+                if let label = viewModel.dateRangeLabel {
+                    activeDateBadge(label)
+                        .padding(.horizontal, AppTheme.Spacing.medium)
+                        .padding(.top, AppTheme.Spacing.xSmall)
+                        .padding(.bottom, AppTheme.Spacing.small)
+                }
+
                 if viewModel.isLoading && viewModel.quotes.isEmpty {
                     Spacer()
                     LoadingView(message: "加载报价数据...")
@@ -46,20 +53,30 @@ struct QuoteOverviewView: View {
                 await viewModel.loadData()
             }
         }
+        .alert("操作结果", isPresented: Binding(
+            get: { viewModel.actionMessage != nil },
+            set: { if !$0 { viewModel.actionMessage = nil } }
+        )) {
+            Button("确定", role: .cancel) {}
+        } message: {
+            Text(viewModel.actionMessage ?? "")
+        }
     }
     
     // MARK: - Search & Filter
-    
+
+    @State private var showCustomDatePicker = false
+
     private var searchAndFilterBar: some View {
         VStack(spacing: AppTheme.Spacing.xSmall) {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(AppTheme.Colors.tertiaryText)
-                
+
                 TextField("搜索编号 / 客户 / 品名 / 原料", text: $viewModel.searchText)
                     .font(AppTheme.Typography.subheadline)
                     .onSubmit { viewModel.refresh() }
-                
+
                 if !viewModel.searchText.isEmpty {
                     Button(action: {
                         viewModel.searchText = ""
@@ -74,48 +91,136 @@ struct QuoteOverviewView: View {
             .background(AppTheme.Colors.secondaryBackground)
             .cornerRadius(AppTheme.CornerRadius.small)
             .padding(.horizontal, AppTheme.Spacing.medium)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: AppTheme.Spacing.xSmall) {
-                    ForEach(QuoteStatus.allCases, id: \.rawValue) { status in
-                        FilterChip(
-                            title: status.label,
-                            isSelected: viewModel.selectedStatus == status
-                        ) {
-                            viewModel.selectedStatus = status
-                        }
+
+            // Status chips + date icon
+            HStack(spacing: 6) {
+                ForEach(QuoteStatus.allCases, id: \.rawValue) { status in
+                    FilterChip(
+                        title: status.label,
+                        isSelected: viewModel.selectedStatus == status
+                    ) {
+                        viewModel.selectedStatus = status
                     }
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, AppTheme.Spacing.medium)
+
+                dateFilterIcon
             }
+            .padding(.horizontal, AppTheme.Spacing.medium)
+
         }
         .padding(.vertical, AppTheme.Spacing.small)
         .background(AppTheme.Colors.background)
+        .sheet(isPresented: $showCustomDatePicker) {
+            CustomDateRangeSheet(viewModel: viewModel)
+        }
+    }
+
+    // MARK: - Date Filter Icon (fixed size, never changes width)
+
+    private var dateFilterIcon: some View {
+        Menu {
+            Button("近7天") { viewModel.applyDateRange(days: 7) }
+            Button("近30天") { viewModel.applyDateRange(days: 30) }
+            Button("近90天") { viewModel.applyDateRange(days: 90) }
+            Button("今年") { viewModel.applyDateRangeThisYear() }
+            Divider()
+            Button("自选时间段") { showCustomDatePicker = true }
+            if viewModel.dateFrom != nil {
+                Divider()
+                Button("清除筛选", role: .destructive) { viewModel.clearDateRange() }
+            }
+        } label: {
+            Image(systemName: viewModel.dateFrom != nil ? "calendar.badge.checkmark" : "calendar.badge.clock")
+                .font(.system(size: 15))
+                .foregroundColor(viewModel.dateFrom != nil ? .white : AppTheme.Colors.primaryText)
+                .frame(width: 34, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(viewModel.dateFrom != nil ? AppTheme.Colors.primary : AppTheme.Colors.secondaryBackground)
+                )
+        }
+    }
+
+    // MARK: - Active Date Badge
+
+    private func activeDateBadge(_ label: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "calendar")
+                .font(.system(size: 11))
+            Text(label)
+                .font(AppTheme.Typography.caption1)
+
+            Spacer()
+
+            Menu {
+                Button("近7天") { viewModel.applyDateRange(days: 7) }
+                Button("近30天") { viewModel.applyDateRange(days: 30) }
+                Button("近90天") { viewModel.applyDateRange(days: 90) }
+                Button("今年") { viewModel.applyDateRangeThisYear() }
+                Divider()
+                Button("自选时间段") { showCustomDatePicker = true }
+            } label: {
+                Text("修改")
+                    .font(AppTheme.Typography.caption2)
+                    .foregroundColor(AppTheme.Colors.primary)
+            }
+
+            Button {
+                viewModel.clearDateRange()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(AppTheme.Colors.tertiaryText)
+            }
+        }
+        .foregroundColor(AppTheme.Colors.primary)
+        .padding(.horizontal, AppTheme.Spacing.small)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(AppTheme.Colors.primary.opacity(0.08))
+        )
     }
     
     // MARK: - List
     
     private var overviewList: some View {
-        ScrollView {
-            LazyVStack(spacing: AppTheme.Spacing.small) {
-                ForEach(viewModel.quotes) { quote in
-                    QuoteOverviewCard(quote: quote)
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: AppTheme.Spacing.small) {
+                    Color.clear.frame(height: AppTheme.Spacing.small).id("list-top")
+
+                    ForEach(viewModel.quotes) { quote in
+                        QuoteOverviewCard(
+                            quote: quote,
+                            isSubmitting: viewModel.processingQuoteNo == quote.quoteNo,
+                            canApprove: viewModel.authManager.canApprove,
+                            onAction: { action in
+                                viewModel.execute(action: action, quoteNo: quote.quoteNo)
+                            }
+                        )
+                    }
+                    
+                    if viewModel.hasMore {
+                        ProgressView()
+                            .padding()
+                            .task {
+                                await viewModel.loadMore()
+                            }
+                    }
                 }
-                
-                if viewModel.hasMore {
-                    ProgressView()
-                        .padding()
-                        .task {
-                            await viewModel.loadMore()
-                        }
+                .padding(.horizontal, AppTheme.Spacing.medium)
+                .padding(.bottom, 100)
+            }
+            .refreshable {
+                await viewModel.refreshAsync()
+            }
+            .onChange(of: viewModel.scrollResetToken) { _ in
+                withAnimation(.easeOut(duration: 0.2)) {
+                    proxy.scrollTo("list-top", anchor: .top)
                 }
             }
-            .padding(.horizontal, AppTheme.Spacing.medium)
-            .padding(.top, AppTheme.Spacing.small)
-            .padding(.bottom, 100)
-        }
-        .refreshable {
-            await viewModel.refreshAsync()
         }
     }
     
@@ -147,9 +252,20 @@ struct QuoteOverviewView: View {
 
 struct QuoteOverviewCard: View {
     let quote: QuoteOverview
+    let isSubmitting: Bool
+    let canApprove: Bool
+    let onAction: (QuoteApprovalAction) -> Void
+
     @State private var isExpanded = false
     @State private var showWeavePattern = false
-    
+    @State private var showDetail = false
+    @State private var pendingAction: QuoteApprovalAction?
+
+    private var availableActions: [QuoteApprovalAction] {
+        guard canApprove else { return [] }
+        return QuoteApprovalAction.actions(for: quote.normalizedStatus)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             cardHeader
@@ -162,14 +278,42 @@ struct QuoteOverviewCard: View {
             if isExpanded {
                 expandedContent
             }
+
+            if !availableActions.isEmpty {
+                Divider()
+                    .padding(.horizontal, AppTheme.Spacing.medium)
+                actionBar
+            }
             
             expandToggle
         }
         .background(AppTheme.Colors.background)
         .cornerRadius(AppTheme.CornerRadius.medium)
         .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
+        .onTapGesture { showDetail = true }
         .sheet(isPresented: $showWeavePattern) {
             WeavePatternView(quoteNo: quote.quoteNo)
+        }
+        .sheet(isPresented: $showDetail) {
+            QuoteDetailView(quoteNo: quote.quoteNo)
+        }
+        .confirmationDialog(
+            pendingAction?.label ?? "",
+            isPresented: Binding(
+                get: { pendingAction != nil },
+                set: { if !$0 { pendingAction = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let action = pendingAction {
+                Button(action.label) {
+                    onAction(action)
+                    pendingAction = nil
+                }
+            }
+            Button("取消", role: .cancel) { pendingAction = nil }
+        } message: {
+            Text("确认对 \(quote.quoteNo) 执行该操作？")
         }
     }
     
@@ -183,8 +327,12 @@ struct QuoteOverviewCard: View {
                         .font(AppTheme.Typography.headline)
                         .foregroundColor(AppTheme.Colors.primaryText)
                     
-                    if let materialNo = quote.materialNo, !materialNo.isEmpty {
-                        Text("产品编号: \(materialNo)")
+                    if let materialName = quote.materialName, !materialName.isEmpty {
+                        Text(materialName)
+                            .font(AppTheme.Typography.caption1)
+                            .foregroundColor(AppTheme.Colors.secondaryText)
+                    } else if let materialNo = quote.materialNo, !materialNo.isEmpty {
+                        Text(materialNo)
                             .font(AppTheme.Typography.caption1)
                             .foregroundColor(AppTheme.Colors.primary)
                     }
@@ -242,7 +390,7 @@ struct QuoteOverviewCard: View {
         .padding(AppTheme.Spacing.medium)
     }
     
-    // MARK: - Key Metrics (always visible)
+    // MARK: - Key Metrics
     
     private var keyMetricsGrid: some View {
         LazyVGrid(columns: [
@@ -254,6 +402,8 @@ struct QuoteOverviewCard: View {
             MetricItem(label: "门幅", value: formatDecimal(quote.width), icon: "ruler")
             MetricItem(label: "纬密", value: formatDecimal(quote.weftDensity), icon: "lines.measurement.horizontal")
             MetricItem(label: "总经根数", value: formatInt(quote.beamTotalEnd), icon: "number")
+            MetricItem(label: "成本价", value: formatPrice(quote.costPrice), icon: "sum")
+            MetricItem(label: "利润率", value: formatPercent(quote.profitRate), icon: "chart.line.uptrend.xyaxis")
             MetricItem(label: "日工费", value: formatPrice(quote.weaveDaySaleCost), icon: "yensign.circle")
             MetricItem(label: "日产量", value: formatDecimal(quote.weaveDayOutput), icon: "gauge.with.dots.needle.67percent")
         }
@@ -266,7 +416,7 @@ struct QuoteOverviewCard: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
             Divider()
                 .padding(.horizontal, AppTheme.Spacing.medium)
-            
+
             if let materials = quote.materials, !materials.isEmpty {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
                     Text("原料明细")
@@ -309,6 +459,36 @@ struct QuoteOverviewCard: View {
             }
         }
     }
+
+    // MARK: - Action Bar
+
+    private var actionBar: some View {
+        HStack(spacing: AppTheme.Spacing.small) {
+            ForEach(availableActions, id: \.rawValue) { action in
+                Button {
+                    pendingAction = action
+                } label: {
+                    HStack(spacing: 6) {
+                        if isSubmitting {
+                            ProgressView()
+                                .scaleEffect(0.75)
+                                .tint(.white)
+                        }
+                        Text(action.label)
+                            .font(AppTheme.Typography.footnote)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppTheme.Spacing.small)
+                    .background(actionColor(for: action))
+                    .cornerRadius(AppTheme.CornerRadius.small)
+                }
+                .disabled(isSubmitting)
+            }
+        }
+        .padding(AppTheme.Spacing.medium)
+    }
     
     // MARK: - Expand Toggle
     
@@ -332,13 +512,23 @@ struct QuoteOverviewCard: View {
             .padding(.vertical, AppTheme.Spacing.xSmall)
         }
     }
-    
-    // MARK: - Formatters
+
+    // MARK: - Helpers
+
+    private func actionColor(for action: QuoteApprovalAction) -> Color {
+        switch action {
+        case .submit:  return AppTheme.Colors.primary
+        case .approve: return AppTheme.Colors.success
+        case .reject:  return AppTheme.Colors.error
+        case .revoke:  return AppTheme.Colors.warning
+        }
+    }
     
     private func formatPrice(_ value: Double?) -> String {
         guard let v = value else { return "-" }
         return String(format: "¥%.0f", v)
     }
+
     
     private func formatDecimal(_ value: Double?) -> String {
         guard let v = value else { return "-" }
@@ -354,6 +544,11 @@ struct QuoteOverviewCard: View {
         guard let v = value else { return "-" }
         return "\(v)"
     }
+
+    private func formatPercent(_ value: Double?) -> String {
+        guard let v = value else { return "-" }
+        return String(format: "%.1f%%", v)
+    }
 }
 
 // MARK: - Filter Chip
@@ -362,25 +557,35 @@ struct FilterChip: View {
     let title: String
     let isSelected: Bool
     let action: () -> Void
-    
+
+    @GestureState private var isPressed = false
+
+    private let chipRadius: CGFloat = 100
+
     var body: some View {
-        Button(action: {
-            HapticFeedbackManager.shared.selectionChanged()
-            action()
-        }) {
-            Text(title)
-                .font(AppTheme.Typography.footnote)
-                .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundColor(isSelected ? .white : AppTheme.Colors.primaryText)
-                .padding(.horizontal, AppTheme.Spacing.medium)
-                .padding(.vertical, AppTheme.Spacing.xSmall)
-                .background(
-                    isSelected
-                        ? AnyShapeStyle(AppTheme.Colors.primaryGradient)
-                        : AnyShapeStyle(AppTheme.Colors.secondaryBackground)
-                )
-                .clipShape(Capsule())
-        }
+        Text(title)
+            .font(AppTheme.Typography.footnote)
+            .fontWeight(isSelected ? .semibold : .regular)
+            .foregroundColor(isSelected ? .white : AppTheme.Colors.primaryText)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .padding(.horizontal, AppTheme.Spacing.small)
+            .padding(.vertical, AppTheme.Spacing.xSmall)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: chipRadius, style: .continuous)
+                    .fill(isSelected ? AppTheme.Colors.primary : AppTheme.Colors.secondaryBackground)
+            )
+            .opacity(isPressed ? 0.7 : 1)
+            .contentShape(RoundedRectangle(cornerRadius: chipRadius, style: .continuous))
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .updating($isPressed) { _, state, _ in state = true }
+                    .onEnded { _ in
+                        HapticFeedbackManager.shared.selectionChanged()
+                        action()
+                    }
+            )
     }
 }
 
@@ -415,7 +620,7 @@ struct MetricItem: View {
     }
 }
 
-// MARK: - Mini Info (kept for potential reuse)
+// MARK: - MiniInfo
 
 struct MiniInfo: View {
     let icon: String
@@ -433,6 +638,75 @@ struct MiniInfo: View {
     }
 }
 
+// MARK: - Custom Date Range Sheet
+
+struct CustomDateRangeSheet: View {
+    @ObservedObject var viewModel: QuoteOverviewViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var startDate = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
+    @State private var endDate = Date()
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("选择时间范围") {
+                    DatePicker("起始日期", selection: $startDate, in: ...endDate, displayedComponents: .date)
+                    DatePicker("截止日期", selection: $endDate, in: startDate..., displayedComponents: .date)
+                }
+
+                Section {
+                    HStack(spacing: AppTheme.Spacing.small) {
+                        Button("近30天") {
+                            endDate = Date()
+                            startDate = Calendar.current.date(byAdding: .day, value: -30, to: endDate)!
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button("近90天") {
+                            endDate = Date()
+                            startDate = Calendar.current.date(byAdding: .day, value: -90, to: endDate)!
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button("今年") {
+                            endDate = Date()
+                            let year = Calendar.current.component(.year, from: endDate)
+                            startDate = Calendar.current.date(from: DateComponents(year: year, month: 1, day: 1))!
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+            .navigationTitle("自选时间段")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("确定") {
+                        viewModel.applyCustomDateRange(from: startDate, to: endDate)
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+            .onAppear {
+                if let from = viewModel.dateFrom,
+                   let d = QuoteOverviewViewModel.dateFmt.date(from: from) {
+                    startDate = d
+                }
+                if let to = viewModel.dateTo,
+                   let d = QuoteOverviewViewModel.dateFmt.date(from: to) {
+                    endDate = d
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationBackground(Color(.systemBackground))
+    }
+}
+
 // MARK: - ViewModel
 
 @MainActor
@@ -441,467 +715,33 @@ class QuoteOverviewViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var selectedStatus: QuoteStatus = .all {
-        didSet { refresh() }
+        didSet { scrollResetToken = UUID(); refresh() }
     }
+    @Published var scrollResetToken = UUID()
     @Published var searchText = ""
-    
-    private var currentPage = 1
-    private var totalPages = 1
-    private let service = QuoteAPIService.shared
-    
-    var hasMore: Bool { currentPage < totalPages }
-    
-    func loadData() async {
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-            let response = try await service.fetchQuoteOverview(
-                status: selectedStatus.queryValue,
-                keyword: searchText.isEmpty ? nil : searchText,
-                page: 1
-            )
-            quotes = response.data
-            currentPage = response.page
-            totalPages = response.totalPages
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        
-        isLoading = false
-    }
-    
-    func loadMore() async {
-        guard !isLoading, hasMore else { return }
-        isLoading = true
-        
-        do {
-            let response = try await service.fetchQuoteOverview(
-                status: selectedStatus.queryValue,
-                keyword: searchText.isEmpty ? nil : searchText,
-                page: currentPage + 1
-            )
-            quotes.append(contentsOf: response.data)
-            currentPage = response.page
-            totalPages = response.totalPages
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        
-        isLoading = false
-    }
-    
-    func refresh() {
-        Task { await loadData() }
-    }
-    
-    func refreshAsync() async {
-        await loadData()
-    }
-}
-
-// MARK: - Approval List
-
-struct QuoteApprovalView: View {
-    @StateObject private var viewModel = QuoteApprovalViewModel()
-
-    var body: some View {
-        ZStack {
-            AppTheme.Colors.groupedBackground
-                .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                approvalFilterBar
-
-                if viewModel.isLoading && viewModel.quotes.isEmpty {
-                    Spacer()
-                    LoadingView(message: "加载审批数据...")
-                    Spacer()
-                } else if let error = viewModel.errorMessage, viewModel.quotes.isEmpty {
-                    Spacer()
-                    approvalErrorView(error)
-                    Spacer()
-                } else if viewModel.quotes.isEmpty {
-                    Spacer()
-                    EmptyStateView(
-                        icon: "checklist",
-                        title: "暂无审批数据",
-                        subtitle: "当前筛选条件下没有报价记录",
-                        actionTitle: "刷新",
-                        action: { viewModel.refresh() }
-                    )
-                    Spacer()
-                } else {
-                    approvalList
-                }
-            }
-        }
-        .task {
-            if viewModel.quotes.isEmpty {
-                await viewModel.loadData()
-            }
-        }
-        .alert("操作结果", isPresented: Binding(
-            get: { viewModel.actionMessage != nil },
-            set: { if !$0 { viewModel.actionMessage = nil } }
-        )) {
-            Button("确定", role: .cancel) {}
-        } message: {
-            Text(viewModel.actionMessage ?? "")
-        }
-    }
-
-    private var approvalFilterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: AppTheme.Spacing.xSmall) {
-                ForEach(QuoteStatus.allCases, id: \.rawValue) { status in
-                    FilterChip(
-                        title: status.label,
-                        isSelected: viewModel.selectedStatus == status
-                    ) {
-                        viewModel.selectedStatus = status
-                    }
-                }
-            }
-            .padding(.horizontal, AppTheme.Spacing.medium)
-            .padding(.vertical, AppTheme.Spacing.small)
-        }
-        .background(AppTheme.Colors.background)
-    }
-
-    private var approvalList: some View {
-        ScrollView {
-            LazyVStack(spacing: AppTheme.Spacing.small) {
-                ForEach(viewModel.quotes) { quote in
-                    QuoteApprovalCard(
-                        quote: quote,
-                        isSubmitting: viewModel.processingQuoteNo == quote.quoteNo,
-                        onAction: { action in
-                            viewModel.execute(action: action, quote: quote)
-                        }
-                    )
-                }
-
-                if viewModel.hasMore {
-                    ProgressView()
-                        .padding()
-                        .task {
-                            await viewModel.loadMore()
-                        }
-                }
-            }
-            .padding(.horizontal, AppTheme.Spacing.medium)
-            .padding(.top, AppTheme.Spacing.small)
-            .padding(.bottom, 100)
-        }
-        .refreshable {
-            await viewModel.refreshAsync()
-        }
-    }
-
-    private func approvalErrorView(_ message: String) -> some View {
-        VStack(spacing: AppTheme.Spacing.medium) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 48))
-                .foregroundColor(AppTheme.Colors.warning)
-
-            Text("加载失败")
-                .font(AppTheme.Typography.title3)
-                .foregroundColor(AppTheme.Colors.primaryText)
-
-            Text(message)
-                .font(AppTheme.Typography.footnote)
-                .foregroundColor(AppTheme.Colors.secondaryText)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, AppTheme.Spacing.xxLarge)
-
-            Button(action: { viewModel.refresh() }) {
-                Text("重试")
-                    .primaryButton()
-            }
-        }
-    }
-}
-
-struct QuoteApprovalCard: View {
-    let quote: QuoteApproval
-    let isSubmitting: Bool
-    let onAction: (QuoteApprovalAction) -> Void
-
-    @State private var isExpanded = false
-    @State private var pendingAction: QuoteApprovalAction?
-
-    private var availableActions: [QuoteApprovalAction] {
-        QuoteApprovalAction.actions(for: quote.normalizedStatus)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            approvalHeader
-
-            Divider()
-                .padding(.horizontal, AppTheme.Spacing.medium)
-
-            approvalMetrics
-
-            if isExpanded {
-                approvalDetails
-            }
-
-            if !availableActions.isEmpty {
-                Divider()
-                    .padding(.horizontal, AppTheme.Spacing.medium)
-
-                actionBar
-            }
-
-            expandToggle
-        }
-        .background(AppTheme.Colors.background)
-        .cornerRadius(AppTheme.CornerRadius.medium)
-        .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
-        .confirmationDialog(
-            pendingAction?.label ?? "",
-            isPresented: Binding(
-                get: { pendingAction != nil },
-                set: { if !$0 { pendingAction = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            if let action = pendingAction {
-                Button(action.label) {
-                    onAction(action)
-                    pendingAction = nil
-                }
-            }
-            Button("取消", role: .cancel) {
-                pendingAction = nil
-            }
-        } message: {
-            Text("确认对 \(quote.quoteNo) 执行该操作？")
-        }
-    }
-
-    private var approvalHeader: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.xxSmall) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(quote.quoteNo)
-                        .font(AppTheme.Typography.headline)
-                        .foregroundColor(AppTheme.Colors.primaryText)
-
-                    if let materialName = quote.materialName, !materialName.isEmpty {
-                        Text(materialName)
-                            .font(AppTheme.Typography.footnote)
-                            .foregroundColor(AppTheme.Colors.secondaryText)
-                    }
-                }
-
-                Spacer()
-
-                Text(quote.status)
-                    .font(AppTheme.Typography.caption1)
-                    .fontWeight(.semibold)
-                    .foregroundColor(statusColor)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(statusColor.opacity(0.12))
-                    .clipShape(Capsule())
-            }
-
-            HStack(spacing: AppTheme.Spacing.medium) {
-                if let customerName = quote.customerName, !customerName.isEmpty {
-                    Label(customerName, systemImage: "building.2")
-                        .font(AppTheme.Typography.footnote)
-                        .foregroundColor(AppTheme.Colors.secondaryText)
-                }
-
-                if let quoteTime = quote.quoteTime, !quoteTime.isEmpty {
-                    Label(quoteTime, systemImage: "calendar")
-                        .font(AppTheme.Typography.footnote)
-                        .foregroundColor(AppTheme.Colors.tertiaryText)
-                }
-            }
-        }
-        .padding(AppTheme.Spacing.medium)
-    }
-
-    private var approvalMetrics: some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible())
-        ], spacing: AppTheme.Spacing.small) {
-            MetricItem(label: "报价", value: formatPrice(quote.price), icon: "yensign.circle")
-            MetricItem(label: "成本价", value: formatPrice(quote.costPrice), icon: "sum")
-            MetricItem(label: "利润率", value: formatPercent(quote.profitRate), icon: "chart.line.uptrend.xyaxis")
-            MetricItem(label: "订单数量", value: formatNumber(quote.orderQty), icon: "shippingbox")
-            MetricItem(label: "门幅", value: formatDecimal(quote.width), icon: "ruler")
-            MetricItem(label: "总经根数", value: formatInt(quote.beamTotalEnd), icon: "number")
-        }
-        .padding(AppTheme.Spacing.medium)
-    }
-
-    private var approvalDetails: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
-            Divider()
-                .padding(.horizontal, AppTheme.Spacing.medium)
-
-            detailRow("织造日工费", formatPrice(quote.weaveDaySaleCost))
-            detailRow("织价", formatPrice(quote.weavePrice))
-            detailRow("浆纱价", formatPrice(quote.sizingPrice))
-            detailRow("浆纱厂", quote.sizingProviderName ?? "-")
-            detailRow("纱价", formatPrice(quote.yarnPrice))
-            detailRow("联系人", quote.linkMan ?? "-")
-            detailRow("备注", quote.remark ?? "-")
-        }
-        .padding(.vertical, AppTheme.Spacing.small)
-        .background(AppTheme.Colors.secondaryBackground.opacity(0.5))
-    }
-
-    private var actionBar: some View {
-        HStack(spacing: AppTheme.Spacing.small) {
-            ForEach(availableActions, id: \.rawValue) { action in
-                Button {
-                    pendingAction = action
-                } label: {
-                    HStack(spacing: 6) {
-                        if isSubmitting {
-                            ProgressView()
-                                .scaleEffect(0.75)
-                                .tint(.white)
-                        }
-                        Text(action.label)
-                            .font(AppTheme.Typography.footnote)
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, AppTheme.Spacing.small)
-                    .background(actionColor(for: action))
-                    .cornerRadius(AppTheme.CornerRadius.small)
-                }
-                .disabled(isSubmitting)
-            }
-        }
-        .padding(AppTheme.Spacing.medium)
-    }
-
-    private var expandToggle: some View {
-        Button(action: {
-            withAnimation(AppTheme.Animation.quick) {
-                isExpanded.toggle()
-            }
-        }) {
-            HStack {
-                Spacer()
-
-                Text(isExpanded ? "收起" : "展开详情")
-                    .font(AppTheme.Typography.caption1)
-                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 11))
-
-                Spacer()
-            }
-            .foregroundColor(AppTheme.Colors.primary)
-            .padding(.vertical, AppTheme.Spacing.xSmall)
-        }
-    }
-
-    private var statusColor: Color {
-        switch quote.normalizedStatus {
-        case .editing:
-            return AppTheme.Colors.warning
-        case .submitted:
-            return AppTheme.Colors.primary
-        case .approved:
-            return AppTheme.Colors.success
-        case .all, .none:
-            return AppTheme.Colors.tertiaryText
-        }
-    }
-
-    private func actionColor(for action: QuoteApprovalAction) -> Color {
-        switch action {
-        case .submit:
-            return AppTheme.Colors.primary
-        case .approve:
-            return AppTheme.Colors.success
-        case .reject:
-            return AppTheme.Colors.error
-        case .revoke:
-            return AppTheme.Colors.warning
-        }
-    }
-
-    private func detailRow(_ title: String, _ value: String) -> some View {
-        HStack(alignment: .top) {
-            Text(title)
-                .font(AppTheme.Typography.caption1)
-                .foregroundColor(AppTheme.Colors.tertiaryText)
-                .frame(width: 72, alignment: .leading)
-
-            Text(value)
-                .font(AppTheme.Typography.footnote)
-                .foregroundColor(AppTheme.Colors.primaryText)
-
-            Spacer()
-        }
-        .padding(.horizontal, AppTheme.Spacing.medium)
-        .padding(.vertical, 2)
-    }
-
-    private func formatPrice(_ value: Double?) -> String {
-        guard let value else { return "-" }
-        return String(format: "¥%.2f", value)
-    }
-
-    private func formatPercent(_ value: Double?) -> String {
-        guard let value else { return "-" }
-        return String(format: "%.1f%%", value)
-    }
-
-    private func formatDecimal(_ value: Double?) -> String {
-        guard let value else { return "-" }
-        return String(format: "%.1f", value)
-    }
-
-    private func formatNumber(_ value: Double?) -> String {
-        guard let value else { return "-" }
-        return String(format: "%.0f", value)
-    }
-
-    private func formatInt(_ value: Int?) -> String {
-        guard let value else { return "-" }
-        return "\(value)"
-    }
-}
-
-@MainActor
-final class QuoteApprovalViewModel: ObservableObject {
-    @Published var quotes: [QuoteApproval] = []
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-    @Published var actionMessage: String?
     @Published var processingQuoteNo: String?
-    @Published var selectedStatus: QuoteStatus = .all {
-        didSet { refresh() }
-    }
-
+    @Published var actionMessage: String?
+    @Published var dateFrom: String?
+    @Published var dateTo: String?
+    @Published var dateRangeLabel: String?
+    
     private var currentPage = 1
     private var totalPages = 1
     private let service = QuoteAPIService.shared
-    private let authManager = QuoteAuthManager.shared
-
+    let authManager = QuoteAuthManager.shared
+    
     var hasMore: Bool { currentPage < totalPages }
-
+    
     func loadData() async {
         isLoading = true
         errorMessage = nil
-
+        
         do {
-            let response = try await service.fetchQuoteApproval(
+            let response = try await service.fetchQuoteOverview(
                 status: selectedStatus.queryValue,
+                keyword: searchText.isEmpty ? nil : searchText,
+                dateFrom: dateFrom,
+                dateTo: dateTo,
                 page: 1
             )
             quotes = response.data
@@ -910,17 +750,20 @@ final class QuoteApprovalViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
-
+        
         isLoading = false
     }
-
+    
     func loadMore() async {
         guard !isLoading, hasMore else { return }
         isLoading = true
-
+        
         do {
-            let response = try await service.fetchQuoteApproval(
+            let response = try await service.fetchQuoteOverview(
                 status: selectedStatus.queryValue,
+                keyword: searchText.isEmpty ? nil : searchText,
+                dateFrom: dateFrom,
+                dateTo: dateTo,
                 page: currentPage + 1
             )
             quotes.append(contentsOf: response.data)
@@ -929,43 +772,91 @@ final class QuoteApprovalViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
-
+        
         isLoading = false
     }
 
-    func execute(action: QuoteApprovalAction, quote: QuoteApproval) {
+    func execute(action: QuoteApprovalAction, quoteNo: String) {
         guard processingQuoteNo == nil else { return }
         guard let operatorName = authManager.currentUser, !operatorName.isEmpty else {
             actionMessage = "当前未登录，无法执行审批操作"
             return
         }
 
-        processingQuoteNo = quote.quoteNo
+        processingQuoteNo = quoteNo
         errorMessage = nil
 
         Task {
             do {
                 let response = try await service.performApprovalAction(
-                    quoteNo: quote.quoteNo,
+                    quoteNo: quoteNo,
                     action: action,
                     operatorName: operatorName
                 )
                 actionMessage = response.summaryText
                 await loadData()
             } catch {
-                errorMessage = error.localizedDescription
                 actionMessage = error.localizedDescription
             }
-
             processingQuoteNo = nil
         }
     }
-
+    
     func refresh() {
         Task { await loadData() }
     }
-
+    
     func refreshAsync() async {
         await loadData()
+    }
+
+    // MARK: - Date Range
+
+    static let dateFmt: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    private static let shortFmt: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yy/M/d"
+        return f
+    }()
+
+    func applyDateRange(days: Int) {
+        let to = Date()
+        let from = Calendar.current.date(byAdding: .day, value: -days, to: to)!
+        dateFrom = Self.dateFmt.string(from: from)
+        dateTo = Self.dateFmt.string(from: to)
+        dateRangeLabel = "近\(days)天"
+        scrollResetToken = UUID()
+        refresh()
+    }
+
+    func applyDateRangeThisYear() {
+        let now = Date()
+        let year = Calendar.current.component(.year, from: now)
+        dateFrom = "\(year)-01-01"
+        dateTo = Self.dateFmt.string(from: now)
+        dateRangeLabel = "\(year)年"
+        scrollResetToken = UUID()
+        refresh()
+    }
+
+    func applyCustomDateRange(from: Date, to: Date) {
+        dateFrom = Self.dateFmt.string(from: from)
+        dateTo = Self.dateFmt.string(from: to)
+        dateRangeLabel = "\(Self.shortFmt.string(from: from))~\(Self.shortFmt.string(from: to))"
+        scrollResetToken = UUID()
+        refresh()
+    }
+
+    func clearDateRange() {
+        dateFrom = nil
+        dateTo = nil
+        dateRangeLabel = nil
+        scrollResetToken = UUID()
+        refresh()
     }
 }

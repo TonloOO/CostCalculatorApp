@@ -13,26 +13,59 @@ final class QuoteAuthManager: ObservableObject {
     
     @Published var isLoggedIn: Bool
     @Published var currentUser: String?
+    @Published var isLoading = false
+    @Published private(set) var canApprove: Bool
     
-    private let keychainAccount = "xzx_quote_auth"
-    private let userDefaultsKey = "xzx_quote_username"
+    private(set) var userGuid: String?
+    private(set) var userId: String?
+    private(set) var userType: Int?
+    private(set) var role: String?
+    private(set) var salesInfo: ERPSalesInfo?
     
-    /// Hardcoded credentials for enterprise internal use.
-    /// Replace with API-based auth when ready.
-    private let validCredentials: [String: String] = [
-        "admin": "xzx2026",
-        "manager": "xzx2026",
-        "viewer": "xzx2026"
-    ]
+    private let keychainTokenAccount = "xzx_quote_auth_token"
     
-    private init() {
-        let hasToken = Self.readKeychain(account: keychainAccount) != nil
-        let user = UserDefaults.standard.string(forKey: userDefaultsKey)
-        self.isLoggedIn = hasToken && user != nil
-        self.currentUser = user
+    private enum UDKey {
+        static let username = "xzx_quote_username"
+        static let userGuid = "xzx_quote_user_guid"
+        static let userId = "xzx_quote_user_id"
+        static let userType = "xzx_quote_user_type"
+        static let role = "xzx_quote_user_role"
+        static let canApprove = "xzx_quote_can_approve"
+        static let salesInfo = "xzx_quote_sales_info"
     }
     
-    func login(username: String, password: String) -> Result<Void, AuthError> {
+    private init() {
+        let token = Self.readKeychain(account: "xzx_quote_auth_token")
+        let user = UserDefaults.standard.string(forKey: UDKey.username)
+        let storedRole = UserDefaults.standard.string(forKey: UDKey.role)
+        
+        if token != nil && user != nil && storedRole != nil {
+            self.isLoggedIn = true
+            self.currentUser = user
+            self.userGuid = UserDefaults.standard.string(forKey: UDKey.userGuid)
+            self.userId = UserDefaults.standard.string(forKey: UDKey.userId)
+            self.userType = UserDefaults.standard.object(forKey: UDKey.userType) as? Int
+            self.role = storedRole
+            self.canApprove = UserDefaults.standard.bool(forKey: UDKey.canApprove)
+            self.salesInfo = Self.loadSalesInfo()
+        } else {
+            self.isLoggedIn = false
+            self.currentUser = nil
+            self.canApprove = false
+            if token != nil {
+                Self.deleteKeychain(account: "xzx_quote_auth_token")
+                Self.clearAllUserDefaults()
+            }
+        }
+    }
+    
+    var authToken: String? {
+        Self.readKeychain(account: keychainTokenAccount)
+    }
+    
+    // MARK: - ERP Login
+    
+    func login(username: String, password: String) async -> Result<Void, AuthError> {
         let trimmedUser = username.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedPass = password.trimmingCharacters(in: .whitespacesAndNewlines)
         
@@ -40,30 +73,112 @@ final class QuoteAuthManager: ObservableObject {
             return .failure(.emptyFields)
         }
         
-        guard let expected = validCredentials[trimmedUser.lowercased()],
-              expected == trimmedPass else {
-            return .failure(.invalidCredentials)
+        let baseURL = QuoteAPIService.shared.baseURL
+        guard let url = URL(string: "\(baseURL)/api/auth/login") else {
+            return .failure(.networkError("无效的服务器地址"))
         }
         
-        let token = UUID().uuidString
-        Self.saveKeychain(account: keychainAccount, value: token)
-        UserDefaults.standard.set(trimmedUser, forKey: userDefaultsKey)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 15
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
         
-        isLoggedIn = true
-        currentUser = trimmedUser
-        return .success(())
+        let body = ["username": trimmedUser, "password": trimmedPass]
+        request.httpBody = try? JSONEncoder().encode(body)
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                return .failure(.networkError("无效的服务器响应"))
+            }
+            
+            if httpResponse.statusCode == 401 {
+                return .failure(.invalidCredentials)
+            }
+            
+            if httpResponse.statusCode == 403 {
+                return .failure(.accessDenied)
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                let body = String(data: data, encoding: .utf8) ?? ""
+                return .failure(.networkError("服务器错误 (\(httpResponse.statusCode)): \(body.prefix(200))"))
+            }
+            
+            let loginResponse = try JSONDecoder().decode(ERPLoginResponse.self, from: data)
+            
+            await MainActor.run {
+                Self.saveKeychain(account: keychainTokenAccount, value: loginResponse.token)
+                
+                UserDefaults.standard.set(loginResponse.userName, forKey: UDKey.username)
+                UserDefaults.standard.set(loginResponse.userGuid, forKey: UDKey.userGuid)
+                UserDefaults.standard.set(loginResponse.userId, forKey: UDKey.userId)
+                UserDefaults.standard.set(loginResponse.userType, forKey: UDKey.userType)
+                UserDefaults.standard.set(loginResponse.role, forKey: UDKey.role)
+                UserDefaults.standard.set(loginResponse.canApprove, forKey: UDKey.canApprove)
+                Self.saveSalesInfo(loginResponse.sales)
+                
+                isLoggedIn = true
+                currentUser = loginResponse.userName
+                userGuid = loginResponse.userGuid
+                userId = loginResponse.userId
+                userType = loginResponse.userType
+                role = loginResponse.role
+                canApprove = loginResponse.canApprove
+                salesInfo = loginResponse.sales
+            }
+            
+            return .success(())
+            
+        } catch is DecodingError {
+            return .failure(.networkError("服务器响应格式异常"))
+        } catch {
+            return .failure(.networkError(error.localizedDescription))
+        }
     }
     
     func logout() {
-        Self.deleteKeychain(account: keychainAccount)
-        UserDefaults.standard.removeObject(forKey: userDefaultsKey)
+        Self.deleteKeychain(account: keychainTokenAccount)
+        Self.clearAllUserDefaults()
         isLoggedIn = false
         currentUser = nil
+        userGuid = nil
+        userId = nil
+        userType = nil
+        role = nil
+        canApprove = false
+        salesInfo = nil
+    }
+    
+    // MARK: - SalesInfo Persistence
+    
+    private static func saveSalesInfo(_ info: ERPSalesInfo?) {
+        guard let info else {
+            UserDefaults.standard.removeObject(forKey: UDKey.salesInfo)
+            return
+        }
+        if let data = try? JSONEncoder().encode(info) {
+            UserDefaults.standard.set(data, forKey: UDKey.salesInfo)
+        }
+    }
+    
+    private static func loadSalesInfo() -> ERPSalesInfo? {
+        guard let data = UserDefaults.standard.data(forKey: UDKey.salesInfo) else { return nil }
+        return try? JSONDecoder().decode(ERPSalesInfo.self, from: data)
+    }
+    
+    private static func clearAllUserDefaults() {
+        for key in [UDKey.username, UDKey.userGuid, UDKey.userId,
+                    UDKey.userType, UDKey.role, UDKey.canApprove, UDKey.salesInfo] {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
     }
     
     // MARK: - Keychain Helpers
     
-    private static func saveKeychain(account: String, value: String) {
+    static func saveKeychain(account: String, value: String) {
         deleteKeychain(account: account)
         let data = value.data(using: .utf8)!
         let query: [String: Any] = [
@@ -74,7 +189,7 @@ final class QuoteAuthManager: ObservableObject {
         SecItemAdd(query as CFDictionary, nil)
     }
     
-    private static func readKeychain(account: String) -> String? {
+    static func readKeychain(account: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: account,
@@ -87,7 +202,7 @@ final class QuoteAuthManager: ObservableObject {
         return String(data: data, encoding: .utf8)
     }
     
-    private static func deleteKeychain(account: String) {
+    static func deleteKeychain(account: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: account
@@ -100,12 +215,36 @@ final class QuoteAuthManager: ObservableObject {
     enum AuthError: LocalizedError {
         case emptyFields
         case invalidCredentials
+        case accessDenied
+        case networkError(String)
         
         var errorDescription: String? {
             switch self {
             case .emptyFields: return "请输入用户名和密码"
             case .invalidCredentials: return "用户名或密码错误"
+            case .accessDenied: return "您没有报价模块的访问权限，仅业务员和管理员可登录"
+            case .networkError(let msg): return "网络错误: \(msg)"
             }
         }
     }
+}
+
+// MARK: - API Response Models
+
+struct ERPSalesInfo: Codable {
+    let salesGuid: String
+    let salesNo: String
+    let salesName: String
+    let salesGroupGuid: String?
+}
+
+struct ERPLoginResponse: Codable {
+    let token: String
+    let userGuid: String
+    let userId: String
+    let userName: String
+    let userType: Int
+    let role: String
+    let canApprove: Bool
+    let sales: ERPSalesInfo?
 }
