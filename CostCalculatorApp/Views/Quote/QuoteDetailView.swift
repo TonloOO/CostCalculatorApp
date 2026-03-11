@@ -232,15 +232,15 @@ struct QuoteDetailView: View {
                                 .foregroundColor(AppTheme.Colors.tertiaryText)
                                 .frame(width: 24)
 
-                            if let usage = m.usage {
+                            if let usage = normalizedUsageLabel(m.usage) {
                                 Text(usage)
                                     .font(AppTheme.Typography.caption1)
                                     .fontWeight(.medium)
-                                    .foregroundColor(usage == "经纱" ? AppTheme.Colors.primary : AppTheme.Colors.accent)
+                                    .foregroundColor(isWarpUsage(m.usage) ? AppTheme.Colors.primary : AppTheme.Colors.accent)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
                                     .background(
-                                        (usage == "经纱" ? AppTheme.Colors.primary : AppTheme.Colors.accent).opacity(0.1)
+                                        (isWarpUsage(m.usage) ? AppTheme.Colors.primary : AppTheme.Colors.accent).opacity(0.1)
                                     )
                                     .cornerRadius(4)
                             }
@@ -263,7 +263,8 @@ struct QuoteDetailView: View {
                         HStack(spacing: AppTheme.Spacing.medium) {
                             materialMetric(materialSpecLabel(for: m), materialSpecValue(for: m))
                             materialMetric("用纱量", fmtDec(m.yarnUseQty))
-                            materialMetric("根数", fmtDec(m.yarnQty))
+                            materialMetric("根数", m.patternPerQty.map { "\($0)" } ?? "-")
+                            materialMetric("占比%", fmtDec(m.perCent))
                             materialMetric("用量kg", fmtDec(m.orderYarnQty))
                         }
 
@@ -424,6 +425,44 @@ struct QuoteDetailView: View {
         }
         return fmtDec(material.denierNum)
     }
+
+    private func isWarpUsage(_ usage: String?) -> Bool {
+        guard let normalized = usage?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased(),
+              !normalized.isEmpty else {
+            return false
+        }
+
+        if normalized == "j" {
+            return true
+        }
+        if normalized == "w" {
+            return false
+        }
+
+        let warpMarkers = ["经", "warp"]
+        let weftMarkers = ["纬", "weft"]
+
+        if warpMarkers.contains(where: { normalized.contains($0) }) {
+            return true
+        }
+        if weftMarkers.contains(where: { normalized.contains($0) }) {
+            return false
+        }
+
+        return false
+    }
+
+    private func normalizedUsageLabel(_ usage: String?) -> String? {
+        guard let normalized = usage?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !normalized.isEmpty else {
+            return nil
+        }
+
+        return isWarpUsage(normalized) ? "经纱" : "纬纱"
+    }
 }
 
 // MARK: - Reusable Section Components
@@ -566,7 +605,7 @@ final class QuoteDetailViewModel: ObservableObject {
         guard let dtlMaterials = d.materials, !dtlMaterials.isEmpty else { return [] }
 
         var result = dtlMaterials.compactMap { materialRow -> Material? in
-            let isWarp = materialRow.usage?.contains("经") == true
+            let isWarp = isWarpUsage(materialRow.usage)
             let labelPrefix = isWarp ? "经纱" : "纬纱"
             let displayName = [labelPrefix, materialRow.materialName]
                 .compactMap { value in
@@ -593,18 +632,7 @@ final class QuoteDetailViewModel: ObservableObject {
             )
         }
 
-        // Calculator requires totalWarpRatio > 0 AND totalWeftRatio > 0.
-        // When one side is entirely missing (e.g. no warp rows), inject a tiny
-        // phantom ratio on the first material. D=0 & price=0 on that side ensure
-        // the phantom contributes zero cost.
-        let totalWarp = result.map { Double($0.warpRatio ?? "0") ?? 0 }.reduce(0, +)
-        let totalWeft = result.map { Double($0.weftRatio ?? "0") ?? 0 }.reduce(0, +)
-        if totalWarp == 0 && !result.isEmpty {
-            result[0].warpRatio = "0.001"
-        }
-        if totalWeft == 0 && !result.isEmpty {
-            result[0].weftRatio = "0.001"
-        }
+        ensureDirectionalRatios(on: &result)
 
         return result
     }
@@ -639,7 +667,8 @@ final class QuoteDetailViewModel: ObservableObject {
 
     private func resolvedMaterialRatio(for material: QuoteDetailMaterial) -> String {
         let candidates = [
-            material.yarnQty,
+            material.perCent,
+            material.patternPerQty.map { Double($0) },
             material.yarnUseQty,
             material.orderYarnQty
         ]
@@ -649,6 +678,83 @@ final class QuoteDetailViewModel: ObservableObject {
         }
 
         return "1"
+    }
+
+    private func isWarpUsage(_ usage: String?) -> Bool {
+        guard let normalized = usage?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased(),
+              !normalized.isEmpty else {
+            return false
+        }
+
+        if normalized == "j" {
+            return true
+        }
+        if normalized == "w" {
+            return false
+        }
+
+        let warpMarkers = ["经", "warp"]
+        let weftMarkers = ["纬", "weft"]
+
+        if warpMarkers.contains(where: { normalized.contains($0) }) {
+            return true
+        }
+        if weftMarkers.contains(where: { normalized.contains($0) }) {
+            return false
+        }
+
+        return false
+    }
+
+    private func normalizedUsageLabel(_ usage: String?) -> String? {
+        guard let normalized = usage?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !normalized.isEmpty else {
+            return nil
+        }
+
+        return isWarpUsage(normalized) ? "经纱" : "纬纱"
+    }
+
+    private func ensureDirectionalRatios(on materials: inout [Material]) {
+        let totalWarp = materials.map { Double($0.warpRatio ?? "0") ?? 0 }.reduce(0, +)
+        let totalWeft = materials.map { Double($0.weftRatio ?? "0") ?? 0 }.reduce(0, +)
+        let warpIndices = materials.indices.filter { isWarpMaterial(materials[$0]) }
+        let weftIndices = materials.indices.filter { isWeftMaterial(materials[$0]) }
+
+        if totalWarp == 0 {
+            if warpIndices.isEmpty {
+                if let firstIndex = materials.indices.first {
+                    materials[firstIndex].warpRatio = "0.001"
+                }
+            } else {
+                for index in warpIndices {
+                    materials[index].warpRatio = "1"
+                }
+            }
+        }
+
+        if totalWeft == 0 {
+            if weftIndices.isEmpty {
+                if let firstIndex = materials.indices.first {
+                    materials[firstIndex].weftRatio = "0.001"
+                }
+            } else {
+                for index in weftIndices {
+                    materials[index].weftRatio = "1"
+                }
+            }
+        }
+    }
+
+    private func isWarpMaterial(_ material: Material) -> Bool {
+        (Double(material.warpYarnValue) ?? 0) > 0 || (Double(material.warpYarnPrice) ?? 0) > 0
+    }
+
+    private func isWeftMaterial(_ material: Material) -> Bool {
+        (Double(material.weftYarnValue) ?? 0) > 0 || (Double(material.weftYarnPrice) ?? 0) > 0
     }
 
     private func fmt(_ v: Double?) -> String {

@@ -15,7 +15,8 @@ struct MaterialRowData: Identifiable {
     var materialName: String = ""
     var materialNo: String = ""
     var denierNum: String = ""
-    var yarnQty: String = ""
+    var patternPerQty: String = ""
+    var perCent: String = ""
     var unitPrice: String = ""
     var yarnPrice: String = ""
     var providerName: String = ""
@@ -278,7 +279,8 @@ struct QuoteCreateView: View {
         TextField("原料名称", text: row.materialName)
         TextField("原料编号", text: row.materialNo)
         numField("D数", text: row.denierNum)
-        numField("根数", text: row.yarnQty)
+        numField("根数", text: row.patternPerQty)
+        numField("占比%", text: row.perCent)
         numField("单价", text: row.unitPrice)
         numField("加工单价", text: row.yarnPrice)
 
@@ -836,7 +838,8 @@ final class QuoteCreateViewModel: ObservableObject {
                     materialName: row.materialName.isEmpty ? nil : row.materialName,
                     usage: row.usage,
                     denierNum: dbl(row.denierNum),
-                    yarnQty: dbl(row.yarnQty),
+                    patternPerQty: Int(row.patternPerQty),
+                    perCent: dbl(row.perCent),
                     unitPrice: dbl(row.unitPrice),
                     yarnPrice: dbl(row.yarnPrice),
                     providerNo: row.providerNo.isEmpty ? nil : row.providerNo,

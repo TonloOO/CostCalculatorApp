@@ -263,8 +263,9 @@ struct QuoteDetailMaterial: Codable, Identifiable {
     let materialName: String?
     let denierNum: Double?
     let yarnUseQty: Double?
-    let yarnQty: Double?
+    let patternPerQty: Int?
     let orderYarnQty: Double?
+    let perCent: Double?
     let providerName: String?
     let unitPrice: Double?
     let yarnPrice: Double?
@@ -361,7 +362,8 @@ struct QuoteCreateMaterialRow: Codable {
     var materialName: String?
     var usage: String
     var denierNum: Double?
-    var yarnQty: Double?
+    var patternPerQty: Int?
+    var perCent: Double?
     var unitPrice: Double?
     var yarnPrice: Double?
     var providerNo: String?
