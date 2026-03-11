@@ -232,7 +232,7 @@ struct WeavePatternView: View {
                     MetricItem(label: "筘号", value: String(format: "%.1f", v), icon: "number.square")
                 }
                 if let v = meta.reedType, !v.isEmpty {
-                    MetricItem(label: "筘型", value: v, icon: "rectangle.split.3x1")
+                    MetricItem(label: "筘入", value: v, icon: "rectangle.split.3x1")
                 }
                 if let v = meta.weaveSpeed {
                     MetricItem(label: "车速", value: "\(v) rpm", icon: "speedometer")

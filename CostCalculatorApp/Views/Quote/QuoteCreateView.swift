@@ -178,9 +178,9 @@ struct QuoteCreateView: View {
 
     private var specsSection: some View {
         Section("规格参数") {
-            numField("门幅", text: $vm.width)
+            numField("成品门幅", text: $vm.width)
             numField("筘号", text: $vm.reedId)
-            numField("筘入", text: $vm.fastenerRange)
+            numField("筘幅", text: $vm.fastenerRange)
             numField("废边长度(cm)", text: $vm.sideLength)
             numField("经缩%", text: $vm.warpWastagePercent)
             numField("总经根数", text: $vm.beamTotalEnd)

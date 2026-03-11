@@ -206,6 +206,7 @@ struct QuoteDetail: Codable {
     let width: Double?
     let reedId: Double?
     let fastenerRange: Double?
+    let reedType: String?
     let sideLength: Double?
     let warpWastagePercent: Double?
     let beamTotalEnd: Int?

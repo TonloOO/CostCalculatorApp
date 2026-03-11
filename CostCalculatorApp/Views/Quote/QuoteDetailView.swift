@@ -144,9 +144,10 @@ struct QuoteDetailView: View {
     private func specsSection(_ d: QuoteDetail) -> some View {
         DetailSection(title: "规格参数", icon: "ruler") {
             DetailGrid {
-                DetailCell(label: "门幅", value: fmtDec(d.width))
+                DetailCell(label: "成品门幅", value: fmtDec(d.width))
                 DetailCell(label: "筘号", value: fmtDec(d.reedId))
-                DetailCell(label: "筘入", value: fmtDec(d.fastenerRange))
+                DetailCell(label: "筘幅", value: fmtDec(d.fastenerRange))
+                DetailCell(label: "筘入", value: d.reedType)
                 DetailCell(label: "废边长度cm", value: fmtDec(d.sideLength))
                 DetailCell(label: "经缩%", value: fmtDec(d.warpWastagePercent))
                 DetailCell(label: "总经根数", value: d.beamTotalEnd.map { "\($0)" })
