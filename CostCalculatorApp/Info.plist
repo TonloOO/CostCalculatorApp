@@ -17,5 +17,7 @@
 	<string>需要访问相册以选择纺织品规格图片进行识别</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>需要访问相册以保存计算结果截图</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
