@@ -53,11 +53,49 @@ enum QuoteFormSheet: Identifiable {
     }
 }
 
+enum QuoteFormMode {
+    case create
+    case edit(QuoteDetail)
+
+    var navigationTitle: String {
+        switch self {
+        case .create:
+            return "新建报价单"
+        case .edit:
+            return "编辑报价单"
+        }
+    }
+
+    var successMessagePrefix: String {
+        switch self {
+        case .create:
+            return "创建"
+        case .edit:
+            return "更新"
+        }
+    }
+
+    var quoteNo: String? {
+        switch self {
+        case .create:
+            return nil
+        case .edit(let detail):
+            return detail.quoteNo
+        }
+    }
+}
+
 // MARK: - Main View
 
 struct QuoteCreateView: View {
-    @StateObject private var vm = QuoteCreateViewModel()
+    @StateObject private var vm: QuoteCreateViewModel
     @Environment(\.dismiss) private var dismiss
+    private let onCompleted: (() -> Void)?
+
+    init(mode: QuoteFormMode = .create, onCompleted: (() -> Void)? = nil) {
+        _vm = StateObject(wrappedValue: QuoteCreateViewModel(mode: mode))
+        self.onCompleted = onCompleted
+    }
 
     var body: some View {
         NavigationView {
@@ -68,7 +106,7 @@ struct QuoteCreateView: View {
                     formContent
                 }
             }
-            .navigationTitle("新建报价单")
+            .navigationTitle(vm.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -92,7 +130,10 @@ struct QuoteCreateView: View {
         }
         .alert("提示", isPresented: $vm.showAlert) {
             Button("确定") {
-                if vm.createdQuoteNo != nil { dismiss() }
+                if vm.createdQuoteNo != nil {
+                    onCompleted?()
+                    dismiss()
+                }
             }
         } message: {
             Text(vm.alertMessage)
@@ -582,6 +623,7 @@ final class QuoteCreateViewModel: ObservableObject {
     @Published var weaveSpeed = ""
     @Published var weaveEff = ""
     @Published var weaveDayOutput = ""
+    @Published var weaveDayCost = ""
     @Published var weaveDaySaleCost = ""
     @Published var sizingProviderName = ""
     @Published var sizingProviderGuid: String?
@@ -596,11 +638,23 @@ final class QuoteCreateViewModel: ObservableObject {
     @Published var materialRows: [MaterialRowData] = []
     @Published var finishRows: [FinishRowData] = []
 
+    private let mode: QuoteFormMode
     private let service = QuoteAPIService.shared
     private let authManager = QuoteAuthManager.shared
     private var searchTask: Task<Void, Never>?
+    private var didApplyInitialFormValues = false
+    private var reedType: String?
+    private var currency: String?
+    private var materialTypeName: String?
+    private var weaveType: String?
+
+    init(mode: QuoteFormMode) {
+        self.mode = mode
+    }
 
     // MARK: - Computed
+
+    var navigationTitle: String { mode.navigationTitle }
 
     var isValid: Bool {
         !customerName.isEmpty && authManager.currentUser != nil
@@ -653,6 +707,7 @@ final class QuoteCreateViewModel: ObservableObject {
             alertMessage = "加载基础数据失败: \(error.localizedDescription)"
             showAlert = true
         }
+        applyInitialFormValuesIfNeeded()
         isLoadingInitial = false
     }
 
@@ -667,6 +722,116 @@ final class QuoteCreateViewModel: ObservableObject {
                     groupGuid: sales.salesGroupGuid
                 )
         }
+    }
+
+    private func applyInitialFormValuesIfNeeded() {
+        guard !didApplyInitialFormValues else { return }
+        guard case .edit(let detail) = mode else {
+            didApplyInitialFormValues = true
+            return
+        }
+
+        customerName = detail.customerName ?? ""
+        customerGuid = detail.customerGuid
+        linkMan = detail.linkMan ?? ""
+        if let salesGuid = detail.salesGuid,
+           let matchedSales = salespeople.first(where: { $0.guid == salesGuid }) {
+            selectedSalesperson = matchedSales
+        } else if let salesName = detail.salesName, !salesName.isEmpty {
+            selectedSalesperson = SalespersonRef(
+                guid: detail.salesGuid ?? "",
+                salesNo: nil,
+                salesName: salesName,
+                groupName: nil,
+                groupGuid: detail.salesGroupGuid
+            )
+        }
+
+        if let balanceType = detail.balanceType, !balanceType.isEmpty {
+            selectedBalanceType = balanceTypes.first(where: { $0.name == balanceType })
+                ?? DictionaryItem(code: balanceType, name: balanceType)
+        }
+        source = detail.source ?? ""
+        if !source.isEmpty && !sourceTypes.contains(where: { $0.name == source }) {
+            sourceTypes.append(DictionaryItem(code: source, name: source))
+        }
+        if let deliveryText = detail.deliveryDate,
+           let parsedDate = Self.dateFormatter.date(from: deliveryText) {
+            deliveryDate = parsedDate
+        }
+        if let existingOrderType = detail.orderType,
+           ["散单", "样单", "翻单"].contains(existingOrderType) {
+            orderType = existingOrderType
+        }
+        orderQty = fmt(detail.orderQty)
+        remark = detail.remark ?? ""
+
+        materialNo = detail.materialNo ?? ""
+        materialName = detail.materialName ?? ""
+        materialGuid = detail.materialGuid
+        materialDisplayLabel = [detail.materialNo, detail.materialName]
+            .compactMap { value in
+                guard let value, !value.isEmpty else { return nil }
+                return value
+            }
+            .joined(separator: " · ")
+
+        width = fmt(detail.width)
+        reedId = fmt(detail.reedId)
+        fastenerRange = fmt(detail.fastenerRange)
+        sideLength = fmt(detail.sideLength)
+        warpWastagePercent = fmt(detail.warpWastagePercent)
+        beamTotalEnd = detail.beamTotalEnd.map { "\($0)" } ?? ""
+        warpDensity = fmt(detail.warpDensity)
+        weftDensity = fmt(detail.weftDensity)
+
+        weaveSpeed = fmt(detail.weaveSpeed)
+        weaveEff = fmt(detail.weaveEff)
+        weaveDayOutput = fmt(detail.weaveDayOutput)
+        weaveDayCost = fmt(detail.weaveDayCost)
+        weaveDaySaleCost = fmt(detail.weaveDaySaleCost)
+        sizingProviderName = detail.sizingProviderName ?? ""
+        sizingProviderGuid = detail.sizingProviderGuid
+
+        weavePrice = fmt(detail.weavePrice)
+        sizingPrice = fmt(detail.sizingPrice)
+        sandingPrice = fmt(detail.sandingPrice)
+        stdWeavePrice = fmt(detail.stdWeavePrice)
+        sampleCost = fmt(detail.sampleCost)
+        profitRate = fmt(detail.profitRate)
+
+        reedType = detail.reedType
+        currency = detail.currency
+        materialTypeName = detail.materialTypeName
+        weaveType = detail.weaveType
+
+        materialRows = detail.materials?.map { row in
+            MaterialRowData(
+                usage: normalizedUsage(row.usage),
+                materialName: row.materialName ?? "",
+                materialNo: row.materialNo ?? "",
+                denierNum: fmt(row.denierNum),
+                patternPerQty: row.patternPerQty.map { "\($0)" } ?? "",
+                perCent: fmt(row.perCent),
+                unitPrice: fmt(row.unitPrice),
+                yarnPrice: fmt(row.yarnPrice),
+                providerName: row.providerName ?? "",
+                providerNo: row.providerNo ?? "",
+                yarnCount: row.yarnCount ?? "",
+                remark: row.remark ?? ""
+            )
+        } ?? []
+
+        finishRows = detail.finishDetails?.map { row in
+            FinishRowData(
+                finishMode: row.finishMode ?? "",
+                count: row.count.map { "\($0)" } ?? "",
+                price: fmt(row.price),
+                amount: fmt(row.amount)
+            )
+        } ?? []
+
+        didApplyInitialFormValues = true
     }
 
     // MARK: - Debounced Search
@@ -780,7 +945,7 @@ final class QuoteCreateViewModel: ObservableObject {
 
     func submit() async {
         guard let creator = authManager.currentUser else {
-            alertMessage = "当前未登录，无法创建报价单"
+            alertMessage = "当前未登录，无法保存报价单"
             showAlert = true
             return
         }
@@ -794,15 +959,15 @@ final class QuoteCreateViewModel: ObservableObject {
             customerName: customerName,
             customerGuid: customerGuid,
             linkMan: linkMan.isEmpty ? nil : linkMan,
-            salesGuid: selectedSalesperson?.guid,
+            salesGuid: emptyToNil(selectedSalesperson?.guid),
             salesName: selectedSalesperson?.salesName,
-            salesGroupGuid: selectedSalesperson?.groupGuid,
+            salesGroupGuid: emptyToNil(selectedSalesperson?.groupGuid),
             source: source.isEmpty ? nil : source,
             materialNo: materialNo.isEmpty ? nil : materialNo,
             materialName: materialName.isEmpty ? nil : materialName,
             materialGuid: materialGuid,
-            materialTypeName: nil,
-            weaveType: nil,
+            materialTypeName: materialTypeName,
+            weaveType: weaveType,
             width: dbl(width),
             beamTotalEnd: int(beamTotalEnd),
             warpDensity: dbl(warpDensity),
@@ -810,12 +975,12 @@ final class QuoteCreateViewModel: ObservableObject {
             warpWastagePercent: dbl(warpWastagePercent),
             reedId: dbl(reedId),
             fastenerRange: dbl(fastenerRange),
-            reedType: nil,
+            reedType: reedType,
             sideLength: dbl(sideLength),
             weaveSpeed: dbl(weaveSpeed),
             weaveEff: dbl(weaveEff),
             weaveDayOutput: dbl(weaveDayOutput),
-            weaveDayCost: nil,
+            weaveDayCost: dbl(weaveDayCost),
             weaveDaySaleCost: dbl(weaveDaySaleCost),
             weavePrice: dbl(weavePrice),
             sizingPrice: dbl(sizingPrice),
@@ -825,7 +990,7 @@ final class QuoteCreateViewModel: ObservableObject {
             orderQty: dbl(orderQty),
             orderType: orderType,
             balanceType: selectedBalanceType?.name,
-            currency: nil,
+            currency: currency,
             deliveryDate: dateFmt.string(from: deliveryDate),
             profitRate: dbl(profitRate),
             sizingProviderName: sizingProviderName.isEmpty ? nil : sizingProviderName,
@@ -860,11 +1025,16 @@ final class QuoteCreateViewModel: ObservableObject {
         )
 
         do {
-            let response = try await service.createQuote(request)
+            let response: QuoteCreateResponse
+            if let quoteNo = mode.quoteNo {
+                response = try await service.updateQuote(quoteNo: quoteNo, request: request)
+            } else {
+                response = try await service.createQuote(request)
+            }
             createdQuoteNo = response.quoteNo
-            alertMessage = "报价单 \(response.quoteNo) 创建成功"
+            alertMessage = "报价单 \(response.quoteNo) \(mode.successMessagePrefix)成功"
         } catch {
-            alertMessage = "创建失败: \(error.localizedDescription)"
+            alertMessage = "\(mode.successMessagePrefix)失败: \(error.localizedDescription)"
         }
 
         isSubmitting = false
@@ -873,8 +1043,34 @@ final class QuoteCreateViewModel: ObservableObject {
 
     // MARK: - Formatting Helpers
 
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    private func normalizedUsage(_ usage: String?) -> String {
+        guard let usage = usage?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased(),
+              !usage.isEmpty else {
+            return "纬纱"
+        }
+
+        if usage == "j" || usage.contains("经") || usage.contains("warp") {
+            return "经纱"
+        }
+
+        return "纬纱"
+    }
+
     private func fmt(_ v: Double) -> String {
         String(format: "%.2f", v)
+    }
+
+    private func fmt(_ v: Double?) -> String {
+        guard let v else { return "" }
+        return fmt(v)
     }
 
     private func dbl(_ s: String) -> Double? {
@@ -883,5 +1079,10 @@ final class QuoteCreateViewModel: ObservableObject {
 
     private func int(_ s: String) -> Int? {
         s.isEmpty ? nil : Int(s)
+    }
+
+    private func emptyToNil(_ value: String?) -> String? {
+        guard let value, !value.isEmpty else { return nil }
+        return value
     }
 }

@@ -9,8 +9,10 @@ import SwiftUI
 
 struct QuoteDetailView: View {
     let quoteNo: String
+    var onUpdated: (() -> Void)? = nil
     @StateObject private var viewModel = QuoteDetailViewModel()
     @Environment(\.dismiss) private var dismiss
+    @State private var showEditQuote = false
 
     var body: some View {
         NavigationView {
@@ -29,10 +31,26 @@ struct QuoteDetailView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("关闭") { dismiss() }
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if viewModel.detail?.normalizedStatus == .editing {
+                        Button("编辑") { showEditQuote = true }
+                            .fontWeight(.semibold)
+                    }
+                }
             }
         }
         .task {
             await viewModel.load(quoteNo: quoteNo)
+        }
+        .sheet(isPresented: $showEditQuote) {
+            if let detail = viewModel.detail {
+                QuoteCreateView(mode: .edit(detail)) {
+                    Task {
+                        await viewModel.load(quoteNo: quoteNo)
+                        onUpdated?()
+                    }
+                }
+            }
         }
     }
 
@@ -42,6 +60,7 @@ struct QuoteDetailView: View {
         ScrollView {
             VStack(spacing: AppTheme.Spacing.medium) {
                 headerSection(detail)
+                calculationSection(detail)
                 basicInfoSection(detail)
                 specsSection(detail)
                 productionSection(detail)
@@ -49,7 +68,6 @@ struct QuoteDetailView: View {
                 costBreakdownSection(detail)
                 materialsSection(detail)
                 finishSection(detail)
-                calculationSection()
             }
             .padding(.horizontal, AppTheme.Spacing.medium)
             .padding(.bottom, 40)
@@ -165,7 +183,7 @@ struct QuoteDetailView: View {
                 DetailCell(label: "车速", value: fmtDec(d.weaveSpeed))
                 DetailCell(label: "综合效率%", value: fmtDec(d.weaveEff))
                 DetailCell(label: "织造日产量", value: fmtDec(d.weaveDayOutput))
-                DetailCell(label: "织造日工资", value: fmtPrice(d.weaveDaySaleCost))
+                DetailCell(label: "织造日工费", value: fmtPrice(d.weaveDaySaleCost))
                 DetailCell(label: "浆纱供应商", value: d.sizingProviderName)
             }
         }
@@ -269,7 +287,7 @@ struct QuoteDetailView: View {
                         }
 
                         HStack(spacing: AppTheme.Spacing.medium) {
-                            materialMetric("单价", fmtPrice(m.unitPrice))
+                            materialMetric("原料成本", fmtPrice(m.dtlYarnCost))
                             materialMetric("加工价", fmtPrice(m.yarnPrice))
                             if let provider = m.providerName, !provider.isEmpty {
                                 materialMetric("供应商", provider)
@@ -325,8 +343,13 @@ struct QuoteDetailView: View {
 
     // MARK: - Calculation
 
-    private func calculationSection() -> some View {
-        VStack(spacing: AppTheme.Spacing.small) {
+    private func calculationSection(_ detail: QuoteDetail) -> some View {
+        guard detail.normalizedStatus == .editing else {
+            return AnyView(EmptyView())
+        }
+
+        return AnyView(
+            VStack(spacing: AppTheme.Spacing.small) {
             Button(action: {
                 viewModel.runCalculation()
             }) {
@@ -344,17 +367,18 @@ struct QuoteDetailView: View {
 
             if let result = viewModel.calcResult {
                 DetailSection(title: "计算结果", icon: "checkmark.circle") {
+                    highlightedTotalCost(result.totalCost)
                     DetailGrid {
                         DetailCell(label: "日产量", value: String(format: "%.2f 米", result.dailyProduct))
                         DetailCell(label: "织造工费", value: String(format: "¥%.4f", result.laborCost))
                         DetailCell(label: "经纱成本", value: String(format: "¥%.4f", result.warpCost))
                         DetailCell(label: "纬纱成本", value: String(format: "¥%.4f", result.weftCost))
                         DetailCell(label: "浆纱费", value: String(format: "¥%.4f", result.warpingCost))
-                        DetailCell(label: "总成本", value: String(format: "¥%.4f", result.totalCost))
                     }
                 }
             }
         }
+        )
     }
 
     // MARK: - Error
@@ -386,6 +410,34 @@ struct QuoteDetailView: View {
                 .font(AppTheme.Typography.caption1)
                 .foregroundColor(AppTheme.Colors.primaryText)
         }
+    }
+
+    private func highlightedTotalCost(_ totalCost: Double) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("总成本")
+                    .font(AppTheme.Typography.caption1)
+                    .foregroundColor(AppTheme.Colors.primary.opacity(0.8))
+                Text(String(format: "¥%.4f", totalCost))
+                    .font(AppTheme.Typography.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(AppTheme.Colors.primary)
+            }
+
+            Spacer()
+
+            Image(systemName: "sparkles")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(AppTheme.Colors.primary)
+        }
+        .padding(AppTheme.Spacing.medium)
+        .background(AppTheme.Colors.primary.opacity(0.08))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                .stroke(AppTheme.Colors.primary.opacity(0.18), lineWidth: 1)
+        )
+        .cornerRadius(AppTheme.CornerRadius.medium)
+        .padding(.bottom, 4)
     }
 
     private func statusColor(_ status: QuoteStatus?) -> Color {
@@ -544,6 +596,7 @@ final class QuoteDetailViewModel: ObservableObject {
     func load(quoteNo: String) async {
         isLoading = true
         errorMessage = nil
+        calcResult = nil
         do {
             detail = try await service.fetchQuoteDetail(quoteNo: quoteNo)
         } catch {
@@ -564,7 +617,8 @@ final class QuoteDetailViewModel: ObservableObject {
             return
         }
 
-        let warpShrinkageFactor = 1 + (d.warpWastagePercent ?? 0) / 100.0
+        let pct = d.warpWastagePercent ?? 0
+        let warpShrinkageFactor = pct < 100 ? 100.0 / (100.0 - pct) : 1.0
 
         var alertMsg = ""
         let success = Calculator.calculate(
@@ -638,9 +692,16 @@ final class QuoteDetailViewModel: ObservableObject {
     }
 
     private func resolvedYarnType(for material: QuoteDetailMaterial) -> YarnType {
+        if let denierNum = material.denierNum, denierNum > 0 {
+            return .dNumber
+        }
+
         if let yarnCount = material.yarnCount?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !yarnCount.isEmpty,
-           (material.denierNum == nil || material.denierNum == 0) {
+           !yarnCount.isEmpty {
+            let normalized = yarnCount.lowercased()
+            if normalized.contains("d") || normalized.contains("旦") {
+                return .dNumber
+            }
             return .yarnCount
         }
 
@@ -650,18 +711,27 @@ final class QuoteDetailViewModel: ObservableObject {
     private func normalizedYarnSpec(for material: QuoteDetailMaterial) -> String {
         switch resolvedYarnType(for: material) {
         case .dNumber:
-            let value = material.denierNum ?? 0
+            let value = material.denierNum
+                ?? extractedNumericValue(from: material.yarnCount)
+                ?? 0
             return String(format: "%.2f", value)
         case .yarnCount:
-            let count = material.yarnCount?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return count.isEmpty ? "0" : count
+            let value = extractedNumericValue(from: material.yarnCount) ?? 0
+            return value > 0 ? String(format: "%.2f", value) : "0"
         }
     }
 
     private func resolvedMaterialPrice(for material: QuoteDetailMaterial) -> String {
-        let unitPrice = material.unitPrice ?? 0
         let yarnPrice = material.yarnPrice ?? 0
-        let chosenPrice = unitPrice > 0 ? unitPrice : yarnPrice
+        let unitPrice = material.unitPrice ?? 0
+        let chosenPrice: Double
+        if yarnPrice > 0 {
+            chosenPrice = yarnPrice
+        } else if unitPrice > 0 {
+            chosenPrice = unitPrice
+        } else {
+            chosenPrice = material.dtlYarnCost ?? 0
+        }
         return String(format: "%.2f", chosenPrice)
     }
 
@@ -678,6 +748,29 @@ final class QuoteDetailViewModel: ObservableObject {
         }
 
         return "1"
+    }
+
+    private func extractedNumericValue(from rawValue: String?) -> Double? {
+        guard let rawValue = rawValue?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !rawValue.isEmpty else {
+            return nil
+        }
+
+        if let direct = Double(rawValue) {
+            return direct
+        }
+
+        let pattern = #"[0-9]+(?:\.[0-9]+)?"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(
+                in: rawValue,
+                range: NSRange(rawValue.startIndex..., in: rawValue)
+              ),
+              let range = Range(match.range, in: rawValue) else {
+            return nil
+        }
+
+        return Double(String(rawValue[range]))
     }
 
     private func isWarpUsage(_ usage: String?) -> Bool {

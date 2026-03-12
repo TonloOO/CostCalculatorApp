@@ -224,6 +224,9 @@ struct QuoteOverviewView: View {
                             quote: quote,
                             isSubmitting: viewModel.processingQuoteNo == quote.quoteNo,
                             canApprove: viewModel.authManager.canApprove,
+                            onDetailUpdated: {
+                                viewModel.refresh()
+                            },
                             onAction: { action in
                                 viewModel.execute(action: action, quoteNo: quote.quoteNo)
                             }
@@ -282,6 +285,7 @@ struct QuoteOverviewCard: View {
     let quote: QuoteOverview
     let isSubmitting: Bool
     let canApprove: Bool
+    let onDetailUpdated: () -> Void
     let onAction: (QuoteApprovalAction) -> Void
 
     @State private var isExpanded = false
@@ -305,6 +309,7 @@ struct QuoteOverviewCard: View {
             
             if isExpanded {
                 expandedContent
+                    .transition(.opacity)
             }
 
             if !availableActions.isEmpty {
@@ -317,13 +322,14 @@ struct QuoteOverviewCard: View {
         }
         .background(AppTheme.Colors.background)
         .cornerRadius(AppTheme.CornerRadius.medium)
+        .clipped()
         .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
         .onTapGesture { showDetail = true }
         .sheet(isPresented: $showWeavePattern) {
             WeavePatternView(quoteNo: quote.quoteNo)
         }
         .sheet(isPresented: $showDetail) {
-            QuoteDetailView(quoteNo: quote.quoteNo)
+            QuoteDetailView(quoteNo: quote.quoteNo, onUpdated: onDetailUpdated)
         }
     }
     
@@ -530,12 +536,27 @@ struct QuoteOverviewCard: View {
         }) {
             HStack {
                 Spacer()
-                
-                Text(isExpanded ? "收起" : "展开详情")
+
+                HStack(spacing: 4) {
+                    ZStack {
+                        Text("展开详情")
+                            .opacity(isExpanded ? 0 : 1)
+                        Text("收起")
+                            .opacity(isExpanded ? 1 : 0)
+                    }
                     .font(AppTheme.Typography.caption1)
-                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .animation(AppTheme.Animation.quick, value: isExpanded)
+
+                    ZStack {
+                        Image(systemName: "chevron.down")
+                            .opacity(isExpanded ? 0 : 1)
+                        Image(systemName: "chevron.up")
+                            .opacity(isExpanded ? 1 : 0)
+                    }
                     .font(.system(size: 11))
-                
+                    .animation(AppTheme.Animation.quick, value: isExpanded)
+                }
+
                 Spacer()
             }
             .foregroundColor(AppTheme.Colors.primary)
@@ -547,10 +568,11 @@ struct QuoteOverviewCard: View {
 
     @ViewBuilder
     private func usageBadge(_ usage: String?) -> some View {
-        let isWarp = usage?.contains("经") == true
+        let isWarp = isWarpUsage(usage)
+        let usageLabel = normalizedUsageLabel(usage)
 
-        if let usage, !usage.isEmpty {
-            Text(usage)
+        if let usageLabel {
+            Text(usageLabel)
                 .font(AppTheme.Typography.caption2)
                 .fontWeight(.medium)
                 .foregroundColor(isWarp ? AppTheme.Colors.primary : AppTheme.Colors.accent)
@@ -565,6 +587,44 @@ struct QuoteOverviewCard: View {
                 .fill(AppTheme.Colors.primary.opacity(0.6))
                 .frame(width: 6, height: 6)
         }
+    }
+
+    private func isWarpUsage(_ usage: String?) -> Bool {
+        guard let normalized = usage?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased(),
+              !normalized.isEmpty else {
+            return false
+        }
+
+        if normalized == "j" {
+            return true
+        }
+        if normalized == "w" {
+            return false
+        }
+
+        let warpMarkers = ["经", "warp"]
+        let weftMarkers = ["纬", "weft"]
+
+        if warpMarkers.contains(where: { normalized.contains($0) }) {
+            return true
+        }
+        if weftMarkers.contains(where: { normalized.contains($0) }) {
+            return false
+        }
+
+        return false
+    }
+
+    private func normalizedUsageLabel(_ usage: String?) -> String? {
+        guard let normalized = usage?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !normalized.isEmpty else {
+            return nil
+        }
+
+        return isWarpUsage(normalized) ? "经纱" : "纬纱"
     }
 
     private func actionColor(for action: QuoteApprovalAction) -> Color {

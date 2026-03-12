@@ -134,6 +134,12 @@ final class QuoteAPIService: ObservableObject {
         return try await performRequest(url: url, method: "POST", body: request)
     }
 
+    func updateQuote(quoteNo: String, request: QuoteCreateRequest) async throws -> QuoteCreateResponse {
+        let encodedQuoteNo = quoteNo.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? quoteNo
+        let url = URL(string: "\(baseURL)/api/quote/\(encodedQuoteNo)")!
+        return try await performRequest(url: url, method: "PUT", body: request)
+    }
+
     func fetchWeavePattern(quoteNo: String) async throws -> WeavePatternResponse {
         let encodedQuoteNo = quoteNo.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? quoteNo
         let url = URL(string: "\(baseURL)/api/quote/\(encodedQuoteNo)/weave-pattern")!

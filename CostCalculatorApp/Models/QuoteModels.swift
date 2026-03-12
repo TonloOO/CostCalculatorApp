@@ -192,16 +192,23 @@ extension QuoteApprovalActionResponse {
 struct QuoteDetail: Codable {
     let quoteNo: String
     let customerName: String?
+    let customerGuid: String?
     let materialNo: String?
     let materialName: String?
+    let materialGuid: String?
     let orderType: String?
     let balanceType: String?
     let salesName: String?
+    let salesGuid: String?
+    let salesGroupGuid: String?
     let linkMan: String?
     let remark: String?
     let status: String?
     let quoteTime: String?
     let deliveryDate: String?
+    let source: String?
+    let materialTypeName: String?
+    let weaveType: String?
 
     let width: Double?
     let reedId: Double?
@@ -227,6 +234,7 @@ struct QuoteDetail: Codable {
     let weaveSpeed: Double?
     let weaveEff: Double?
     let weaveDayOutput: Double?
+    let weaveDayCost: Double?
     let weaveDaySaleCost: Double?
 
     let dyeCost: Double?
@@ -244,6 +252,7 @@ struct QuoteDetail: Codable {
 
     let profitRate: Double?
     let sizingProviderName: String?
+    let sizingProviderGuid: String?
     let currency: String?
     let amount: Double?
     let finallyPrice: Double?
@@ -266,6 +275,7 @@ struct QuoteDetailMaterial: Codable, Identifiable {
     let patternPerQty: Int?
     let orderYarnQty: Double?
     let perCent: Double?
+    let providerNo: String?
     let providerName: String?
     let unitPrice: Double?
     let yarnPrice: Double?
