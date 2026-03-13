@@ -11,11 +11,16 @@ struct QuoteLoginView: View {
     @StateObject private var authManager = QuoteAuthManager.shared
     @State private var username = ""
     @State private var password = ""
+    @State private var appSecret: String
     @State private var errorMessage: String?
     @State private var isShaking = false
     @FocusState private var focusedField: Field?
     
-    enum Field { case username, password }
+    enum Field { case username, password, secret }
+    
+    init() {
+        _appSecret = State(initialValue: QuoteAuthManager.shared.appSecret ?? "")
+    }
     
     var body: some View {
         ZStack {
@@ -114,8 +119,8 @@ struct QuoteLoginView: View {
                     SecureField("请输入密码", text: $password)
                         .textContentType(.password)
                         .focused($focusedField, equals: .password)
-                        .submitLabel(.go)
-                        .onSubmit { performLogin() }
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .secret }
                 }
                 .padding(AppTheme.Spacing.small)
                 .background(AppTheme.Colors.secondaryBackground)
@@ -124,6 +129,37 @@ struct QuoteLoginView: View {
                     RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
                         .stroke(focusedField == .password ? AppTheme.Colors.primary : Color.clear, lineWidth: 2)
                 )
+            }
+
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
+                Text("应用密钥")
+                    .font(AppTheme.Typography.caption1)
+                    .foregroundColor(AppTheme.Colors.secondaryText)
+                
+                HStack {
+                    Image(systemName: "key.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(focusedField == .secret ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
+                    
+                    SecureField("请输入应用密钥", text: $appSecret)
+                        .textContentType(.oneTimeCode)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                        .focused($focusedField, equals: .secret)
+                        .submitLabel(.go)
+                        .onSubmit { performLogin() }
+                }
+                .padding(AppTheme.Spacing.small)
+                .background(AppTheme.Colors.secondaryBackground)
+                .cornerRadius(AppTheme.CornerRadius.small)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
+                        .stroke(focusedField == .secret ? AppTheme.Colors.primary : Color.clear, lineWidth: 2)
+                )
+                
+                Text("首次输入后将自动保存，无需重复输入")
+                    .font(.system(size: 11))
+                    .foregroundColor(AppTheme.Colors.tertiaryText)
             }
             
             if let error = errorMessage {
@@ -161,13 +197,13 @@ struct QuoteLoginView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, AppTheme.Spacing.medium)
             .background(
-                (username.isEmpty || password.isEmpty || authManager.isLoading)
+                (username.isEmpty || password.isEmpty || appSecret.isEmpty || authManager.isLoading)
                     ? AnyShapeStyle(Color.gray.opacity(0.4))
                     : AnyShapeStyle(AppTheme.Colors.primaryGradient)
             )
             .cornerRadius(AppTheme.CornerRadius.medium)
         }
-        .disabled(username.isEmpty || password.isEmpty || authManager.isLoading)
+        .disabled(username.isEmpty || password.isEmpty || appSecret.isEmpty || authManager.isLoading)
     }
     
     // MARK: - Action
@@ -178,7 +214,7 @@ struct QuoteLoginView: View {
         authManager.isLoading = true
         
         Task {
-            let result = await authManager.login(username: username, password: password)
+            let result = await authManager.login(username: username, password: password, secret: appSecret)
             await MainActor.run {
                 authManager.isLoading = false
                 switch result {

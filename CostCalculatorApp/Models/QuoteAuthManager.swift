@@ -23,6 +23,7 @@ final class QuoteAuthManager: ObservableObject {
     private(set) var salesInfo: ERPSalesInfo?
     
     private let keychainTokenAccount = "xzx_quote_auth_token"
+    private let keychainSecretAccount = "xzx_quote_app_secret"
     
     private enum UDKey {
         static let username = "xzx_quote_username"
@@ -62,15 +63,32 @@ final class QuoteAuthManager: ObservableObject {
     var authToken: String? {
         Self.readKeychain(account: keychainTokenAccount)
     }
+
+    var appSecret: String? {
+        Self.readKeychain(account: keychainSecretAccount)
+    }
+
+    func saveAppSecret(_ secret: String) {
+        let trimmed = secret.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            Self.deleteKeychain(account: keychainSecretAccount)
+        } else {
+            Self.saveKeychain(account: keychainSecretAccount, value: trimmed)
+        }
+    }
     
     // MARK: - ERP Login
     
-    func login(username: String, password: String) async -> Result<Void, AuthError> {
+    func login(username: String, password: String, secret: String? = nil) async -> Result<Void, AuthError> {
         let trimmedUser = username.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedPass = password.trimmingCharacters(in: .whitespacesAndNewlines)
         
         guard !trimmedUser.isEmpty, !trimmedPass.isEmpty else {
             return .failure(.emptyFields)
+        }
+
+        if let s = secret {
+            saveAppSecret(s)
         }
         
         let baseURL = QuoteAPIService.shared.baseURL
@@ -83,6 +101,10 @@ final class QuoteAuthManager: ObservableObject {
         request.timeoutInterval = 15
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue("application/json", forHTTPHeaderField: "Accept")
+
+        if let appSecret = appSecret, !appSecret.isEmpty {
+            request.addValue(appSecret, forHTTPHeaderField: "X-App-Secret")
+        }
         
         let body = ["username": trimmedUser, "password": trimmedPass]
         request.httpBody = try? JSONEncoder().encode(body)
@@ -99,6 +121,10 @@ final class QuoteAuthManager: ObservableObject {
             }
             
             if httpResponse.statusCode == 403 {
+                let respBody = (try? JSONDecoder().decode([String: String].self, from: data)) ?? [:]
+                if respBody["detail"]?.contains("密钥") == true {
+                    return .failure(.invalidSecret)
+                }
                 return .failure(.accessDenied)
             }
             
@@ -215,6 +241,7 @@ final class QuoteAuthManager: ObservableObject {
     enum AuthError: LocalizedError {
         case emptyFields
         case invalidCredentials
+        case invalidSecret
         case accessDenied
         case networkError(String)
         
@@ -222,6 +249,7 @@ final class QuoteAuthManager: ObservableObject {
             switch self {
             case .emptyFields: return "请输入用户名和密码"
             case .invalidCredentials: return "用户名或密码错误"
+            case .invalidSecret: return "应用密钥无效，请检查后重试"
             case .accessDenied: return "您没有报价模块的访问权限，仅业务员和管理员可登录"
             case .networkError(let msg): return "网络错误: \(msg)"
             }

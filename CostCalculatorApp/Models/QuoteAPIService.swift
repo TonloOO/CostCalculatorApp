@@ -178,6 +178,10 @@ final class QuoteAPIService: ObservableObject {
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
+        if let secret = QuoteAuthManager.shared.appSecret, !secret.isEmpty {
+            request.addValue(secret, forHTTPHeaderField: "X-App-Secret")
+        }
+
         if let body {
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONEncoder().encode(body)
