@@ -79,16 +79,12 @@ final class QuoteAuthManager: ObservableObject {
     
     // MARK: - ERP Login
     
-    func login(username: String, password: String, secret: String? = nil) async -> Result<Void, AuthError> {
+    func login(username: String, password: String) async -> Result<Void, AuthError> {
         let trimmedUser = username.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedPass = password.trimmingCharacters(in: .whitespacesAndNewlines)
         
         guard !trimmedUser.isEmpty, !trimmedPass.isEmpty else {
             return .failure(.emptyFields)
-        }
-
-        if let s = secret {
-            saveAppSecret(s)
         }
         
         let baseURL = QuoteAPIService.shared.baseURL

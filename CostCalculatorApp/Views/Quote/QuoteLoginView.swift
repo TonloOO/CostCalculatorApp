@@ -11,15 +11,16 @@ struct QuoteLoginView: View {
     @StateObject private var authManager = QuoteAuthManager.shared
     @State private var username = ""
     @State private var password = ""
-    @State private var appSecret: String
     @State private var errorMessage: String?
     @State private var isShaking = false
+    @State private var showSecretSheet = false
     @FocusState private var focusedField: Field?
     
-    enum Field { case username, password, secret }
+    enum Field { case username, password }
     
-    init() {
-        _appSecret = State(initialValue: QuoteAuthManager.shared.appSecret ?? "")
+    private var hasSecret: Bool {
+        guard let s = authManager.appSecret else { return false }
+        return !s.isEmpty
     }
     
     var body: some View {
@@ -44,6 +45,24 @@ struct QuoteLoginView: View {
         }
         .navigationTitle("登录验证")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showSecretSheet = true
+                } label: {
+                    Image(systemName: hasSecret ? "key.fill" : "key")
+                        .foregroundColor(hasSecret ? AppTheme.Colors.primary : AppTheme.Colors.error)
+                }
+            }
+        }
+        .sheet(isPresented: $showSecretSheet) {
+            AppSecretSettingView()
+        }
+        .onAppear {
+            if !hasSecret {
+                showSecretSheet = true
+            }
+        }
     }
     
     // MARK: - Lock Icon
@@ -119,8 +138,8 @@ struct QuoteLoginView: View {
                     SecureField("请输入密码", text: $password)
                         .textContentType(.password)
                         .focused($focusedField, equals: .password)
-                        .submitLabel(.next)
-                        .onSubmit { focusedField = .secret }
+                        .submitLabel(.go)
+                        .onSubmit { performLogin() }
                 }
                 .padding(AppTheme.Spacing.small)
                 .background(AppTheme.Colors.secondaryBackground)
@@ -130,36 +149,15 @@ struct QuoteLoginView: View {
                         .stroke(focusedField == .password ? AppTheme.Colors.primary : Color.clear, lineWidth: 2)
                 )
             }
-
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
-                Text("应用密钥")
-                    .font(AppTheme.Typography.caption1)
-                    .foregroundColor(AppTheme.Colors.secondaryText)
-                
-                HStack {
-                    Image(systemName: "key.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(focusedField == .secret ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
-                    
-                    SecureField("请输入应用密钥", text: $appSecret)
-                        .textContentType(.oneTimeCode)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .focused($focusedField, equals: .secret)
-                        .submitLabel(.go)
-                        .onSubmit { performLogin() }
+            
+            if !hasSecret {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 14))
+                    Text("请先点击右上角设置应用密钥")
+                        .font(AppTheme.Typography.footnote)
                 }
-                .padding(AppTheme.Spacing.small)
-                .background(AppTheme.Colors.secondaryBackground)
-                .cornerRadius(AppTheme.CornerRadius.small)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
-                        .stroke(focusedField == .secret ? AppTheme.Colors.primary : Color.clear, lineWidth: 2)
-                )
-                
-                Text("首次输入后将自动保存，无需重复输入")
-                    .font(.system(size: 11))
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                .foregroundColor(AppTheme.Colors.warning)
             }
             
             if let error = errorMessage {
@@ -197,13 +195,13 @@ struct QuoteLoginView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, AppTheme.Spacing.medium)
             .background(
-                (username.isEmpty || password.isEmpty || appSecret.isEmpty || authManager.isLoading)
+                (username.isEmpty || password.isEmpty || !hasSecret || authManager.isLoading)
                     ? AnyShapeStyle(Color.gray.opacity(0.4))
                     : AnyShapeStyle(AppTheme.Colors.primaryGradient)
             )
             .cornerRadius(AppTheme.CornerRadius.medium)
         }
-        .disabled(username.isEmpty || password.isEmpty || appSecret.isEmpty || authManager.isLoading)
+        .disabled(username.isEmpty || password.isEmpty || !hasSecret || authManager.isLoading)
     }
     
     // MARK: - Action
@@ -214,7 +212,7 @@ struct QuoteLoginView: View {
         authManager.isLoading = true
         
         Task {
-            let result = await authManager.login(username: username, password: password, secret: appSecret)
+            let result = await authManager.login(username: username, password: password)
             await MainActor.run {
                 authManager.isLoading = false
                 switch result {
@@ -224,6 +222,63 @@ struct QuoteLoginView: View {
                     errorMessage = error.localizedDescription
                     HapticFeedbackManager.shared.notification(type: .error)
                     isShaking.toggle()
+                }
+            }
+        }
+    }
+}
+
+// MARK: - App Secret Setting Sheet
+
+struct AppSecretSettingView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var secret: String
+    @State private var saved = false
+    
+    init() {
+        _secret = State(initialValue: QuoteAuthManager.shared.appSecret ?? "")
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section {
+                    SecureField("请输入 32 位应用密钥", text: $secret)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                } header: {
+                    Text("应用密钥")
+                } footer: {
+                    Text("此密钥由管理员提供，用于验证应用的合法性。设置后将安全保存，无需重复输入。")
+                }
+                
+                if saved {
+                    Section {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Text("密钥已保存")
+                                .foregroundColor(.green)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("密钥设置")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("保存") {
+                        QuoteAuthManager.shared.saveAppSecret(secret)
+                        saved = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            dismiss()
+                        }
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(secret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
