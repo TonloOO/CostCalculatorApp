@@ -416,6 +416,8 @@ struct QuoteCreateRequest: Codable {
     let weaveDayOutput: Double?
     let weaveDayCost: Double?
     let weaveDaySaleCost: Double?
+    let price: Double?
+    let costPrice: Double?
     let weavePrice: Double?
     let sizingPrice: Double?
     let sandingPrice: Double?
@@ -438,6 +440,39 @@ struct QuoteCreateRequest: Codable {
 struct QuoteCreateResponse: Codable {
     let quoteNo: String
     let guid: String
+}
+
+// MARK: - BOM (Bill of Materials)
+
+struct BOMResponse: Codable {
+    let yarns: [BOMYarn]
+}
+
+struct BOMYarn: Codable, Identifiable {
+    let usage: String
+    let label: String?
+    let materialNo: String?
+    let materialName: String?
+    let materialGuid: String?
+    let denierNum: Double?
+    let yarnCount: String?
+    let patternPerQty: Int?
+    let patternTotalQty: Int?
+    let percent: Double?
+    let suggestedSupplier: BOMSupplier?
+
+    var id: String {
+        "\(usage)-\(label ?? "")-\(materialNo ?? "")"
+    }
+
+    var usageDisplayName: String {
+        usage == "J" ? "经纱" : "纬纱"
+    }
+}
+
+struct BOMSupplier: Codable {
+    let code: String
+    let name: String
 }
 
 // MARK: - Weave Pattern

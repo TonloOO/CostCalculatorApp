@@ -5,6 +5,7 @@
 //  Created by Zishuo Li on 2026-03-10.
 //
 
+import Combine
 import SwiftUI
 
 // MARK: - Row Data
@@ -138,6 +139,18 @@ struct QuoteCreateView: View {
         } message: {
             Text(vm.alertMessage)
         }
+        .alert("更换物料", isPresented: $vm.showMaterialChangeConfirm) {
+            Button("取消", role: .cancel) {
+                vm.pendingMaterial = nil
+            }
+            Button("确认更换", role: .destructive) {
+                if let mat = vm.pendingMaterial {
+                    vm.confirmMaterialChange(mat)
+                }
+            }
+        } message: {
+            Text("更换物料将重新加载原料配方，当前已填写的原料信息将被覆盖，是否继续？")
+        }
     }
 
     // MARK: - Form
@@ -146,10 +159,10 @@ struct QuoteCreateView: View {
         Form {
             basicInfoSection
             materialSection
+            materialsDetailSection
+            pricingSection
             specsSection
             productionSection
-            pricingSection
-            materialsDetailSection
             finishDetailSection
         }
     }
@@ -210,16 +223,238 @@ struct QuoteCreateView: View {
         } header: {
             Text("物料信息")
         } footer: {
-            if vm.materialGuid != nil {
-                Text("选择物料后，规格和生产参数已自动填充，可手动修改")
+            if vm.isLoadingBOM {
+                HStack(spacing: 6) {
+                    ProgressView().scaleEffect(0.7)
+                    Text("正在加载原料配方…")
+                }
+                .font(.caption)
+            } else if vm.materialGuid != nil && !vm.materialRows.isEmpty {
+                Text("原料配方已自动填充，请确认单价、供应商和日工费")
             }
         }
     }
 
-    // MARK: - Specs
+    // MARK: - Materials Detail (moved up, right after material selection)
+
+    private var materialsDetailSection: some View {
+        Section {
+            if vm.materialRows.isEmpty && vm.materialGuid == nil {
+                Text("请先选择物料，原料配方将自动填充")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+            } else {
+                ForEach($vm.materialRows) { $row in
+                    materialRowView(row: $row)
+                }
+                .onDelete { vm.materialRows.remove(atOffsets: $0) }
+            }
+
+            Button {
+                vm.materialRows.append(MaterialRowData())
+            } label: {
+                Label("添加原料", systemImage: "plus.circle")
+            }
+        } header: {
+            HStack {
+                Text("原料明细")
+                Spacer()
+                if !vm.materialRows.isEmpty {
+                    Text("\(vm.materialRows.count) 项")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func materialRowView(row: Binding<MaterialRowData>) -> some View {
+        let isExpanded = vm.expandedMaterialRows.contains(row.wrappedValue.id)
+
+        VStack(alignment: .leading, spacing: 12) {
+            // Header: usage tag + name + price summary
+            HStack(spacing: 8) {
+                Text(row.wrappedValue.usage)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(row.wrappedValue.usage == "经纱" ? AppTheme.Colors.primary : AppTheme.Colors.accent)
+                    )
+
+                Text(row.wrappedValue.materialName.isEmpty ? "未命名" : row.wrappedValue.materialName)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+
+                Spacer()
+
+                if !row.wrappedValue.materialNo.isEmpty {
+                    Text(row.wrappedValue.materialNo)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.vertical, 6)
+
+            Divider()
+
+            // Price fields - always visible, prominent
+            HStack(spacing: 12) {
+                priceField("原料单价", text: row.unitPrice, color: AppTheme.Colors.accent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                priceField("加工单价", text: row.yarnPrice, color: AppTheme.Colors.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            HStack(alignment: .top, spacing: 12) {
+                supplierActionCard(row: row)
+                    .layoutPriority(1)
+                detailToggleCard(rowId: row.wrappedValue.id, isExpanded: isExpanded)
+                    .frame(width: 128)
+            }
+
+            if isExpanded {
+                VStack(spacing: 6) {
+                    Picker("用途", selection: row.usage) {
+                        Text("经纱").tag("经纱")
+                        Text("纬纱").tag("纬纱")
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.vertical, 4)
+
+                    TextField("原料名称", text: row.materialName)
+                    TextField("原料编号", text: row.materialNo)
+                    numField("D数", text: row.denierNum)
+                    numField("根数", text: row.patternPerQty)
+                    numField("占比%", text: row.perCent)
+                    TextField("纱支", text: row.yarnCount)
+                    TextField("备注", text: row.remark)
+                }
+                .padding(12)
+                .background(Color(UIColor.secondarySystemFill).opacity(0.65))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func priceField(_ label: String, text: Binding<String>, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            HStack(spacing: 2) {
+                Text("¥")
+                    .font(.subheadline)
+                    .foregroundColor(color)
+                TextField("0.00", text: text)
+                    .keyboardType(.decimalPad)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color(UIColor.tertiarySystemFill))
+            .cornerRadius(6)
+        }
+    }
+
+    private func supplierActionCard(row: Binding<MaterialRowData>) -> some View {
+        Button {
+            vm.activeSheet = .supplier(row.wrappedValue.id)
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("供应商")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                HStack(spacing: 8) {
+                    Text(row.wrappedValue.providerName.isEmpty ? "请选择" : row.wrappedValue.providerName)
+                        .font(.subheadline)
+                        .foregroundColor(row.wrappedValue.providerName.isEmpty ? .secondary : .primary)
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color(UIColor.secondarySystemFill))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .contentShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func detailToggleCard(rowId: UUID, isExpanded: Bool) -> some View {
+        Button {
+            toggleMaterialExpansion(rowId)
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("更多参数")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                HStack(spacing: 6) {
+                    Text(isExpanded ? "收起" : "展开")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(AppTheme.Colors.primary)
+                    Spacer(minLength: 4)
+                    Image(systemName: isExpanded ? "chevron.up.circle.fill" : "slider.horizontal.3")
+                        .font(.subheadline)
+                        .foregroundColor(AppTheme.Colors.primary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(AppTheme.Colors.primary.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .contentShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func toggleMaterialExpansion(_ rowId: UUID) {
+        if vm.expandedMaterialRows.contains(rowId) {
+            vm.expandedMaterialRows.remove(rowId)
+        } else {
+            vm.expandedMaterialRows.insert(rowId)
+        }
+    }
+
+    // MARK: - Pricing (moved up, right after materials)
+
+    private var pricingSection: some View {
+        Section("价格信息") {
+            numField("报价单价", text: $vm.quotePrice)
+            infoRow("原料成本", vm.materialCostDisplay.isEmpty ? "自动计算" : vm.materialCostDisplay)
+            infoRow("成本单价", vm.costPrice.isEmpty ? "自动计算" : vm.costPrice)
+            infoRow("利润率%", vm.profitRate.isEmpty ? "自动计算" : vm.profitRate)
+            numField("浆纱单价", text: $vm.sizingPrice)
+            numField("磨毛单价", text: $vm.sandingPrice)
+            infoRow("标准工费", vm.stdWeavePrice.isEmpty ? "自动计算" : vm.stdWeavePrice)
+            numField("小样费用", text: $vm.sampleCost)
+        }
+    }
+
+    // MARK: - Specs (collapsible)
 
     private var specsSection: some View {
-        Section("规格参数") {
+        CollapsibleSection(
+            title: "规格参数",
+            isExpanded: $vm.isSpecsExpanded,
+            badge: vm.specsFilledCount
+        ) {
             numField("成品门幅", text: $vm.width)
             numField("筘号", text: $vm.reedId)
             numField("筘幅", text: $vm.fastenerRange)
@@ -231,13 +466,18 @@ struct QuoteCreateView: View {
         }
     }
 
-    // MARK: - Production
+    // MARK: - Production (collapsible)
 
     private var productionSection: some View {
-        Section("生产参数") {
+        CollapsibleSection(
+            title: "生产参数",
+            isExpanded: $vm.isProductionExpanded,
+            badge: vm.productionFilledCount
+        ) {
             numField("车速", text: $vm.weaveSpeed)
             numField("综合效率%", text: $vm.weaveEff)
             numField("日产量", text: $vm.weaveDayOutput)
+            numField("日机台成本", text: $vm.weaveDayCost)
             numField("日工费", text: $vm.weaveDaySaleCost)
 
             pickerRow("浆纱供应商", value: vm.sizingProviderName.isEmpty ? nil : vm.sizingProviderName) {
@@ -246,108 +486,14 @@ struct QuoteCreateView: View {
         }
     }
 
-    // MARK: - Pricing
-
-    private var pricingSection: some View {
-        Section("价格信息") {
-            numField("织价", text: $vm.weavePrice)
-            numField("浆纱单价", text: $vm.sizingPrice)
-            numField("磨毛单价", text: $vm.sandingPrice)
-            numField("标准工费", text: $vm.stdWeavePrice)
-            numField("小样费用", text: $vm.sampleCost)
-            numField("利润率%", text: $vm.profitRate)
-        }
-    }
-
-    // MARK: - Materials Detail
-
-    private var materialsDetailSection: some View {
-        Section {
-            ForEach($vm.materialRows) { $row in
-                DisclosureGroup {
-                    materialRowFields(row: $row)
-                } label: {
-                    materialRowLabel(row: $row.wrappedValue)
-                }
-            }
-            .onDelete { vm.materialRows.remove(atOffsets: $0) }
-
-            Button {
-                vm.materialRows.append(MaterialRowData())
-            } label: {
-                Label("添加原料", systemImage: "plus.circle")
-            }
-        } header: {
-            Text("原料明细")
-        }
-    }
-
-    private func materialRowLabel(row: MaterialRowData) -> some View {
-        HStack {
-            Text(row.usage)
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(row.usage == "经纱" ? AppTheme.Colors.primary : AppTheme.Colors.accent)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(
-                    (row.usage == "经纱" ? AppTheme.Colors.primary : AppTheme.Colors.accent).opacity(0.1)
-                )
-                .cornerRadius(4)
-
-            Text(row.materialName.isEmpty ? "未命名" : row.materialName)
-                .font(.subheadline)
-                .lineLimit(1)
-
-            Spacer()
-
-            if !row.unitPrice.isEmpty {
-                Text("¥\(row.unitPrice)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func materialRowFields(row: Binding<MaterialRowData>) -> some View {
-        Picker("用途", selection: row.usage) {
-            Text("经纱").tag("经纱")
-            Text("纬纱").tag("纬纱")
-        }
-        .pickerStyle(.segmented)
-
-        TextField("原料名称", text: row.materialName)
-        TextField("原料编号", text: row.materialNo)
-        numField("D数", text: row.denierNum)
-        numField("根数", text: row.patternPerQty)
-        numField("占比%", text: row.perCent)
-        numField("单价", text: row.unitPrice)
-        numField("加工单价", text: row.yarnPrice)
-
-        Button {
-            vm.activeSheet = .supplier(row.wrappedValue.id)
-        } label: {
-            HStack {
-                Text("供应商")
-                Spacer()
-                Text(row.wrappedValue.providerName.isEmpty ? "请选择" : row.wrappedValue.providerName)
-                    .foregroundColor(row.wrappedValue.providerName.isEmpty ? .secondary : .primary)
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .tint(.primary)
-
-        TextField("纱支", text: row.yarnCount)
-        TextField("备注", text: row.remark)
-    }
-
-    // MARK: - Finish Detail
+    // MARK: - Finish Detail (collapsible)
 
     private var finishDetailSection: some View {
-        Section {
+        CollapsibleSection(
+            title: "后整理明细",
+            isExpanded: $vm.isFinishExpanded,
+            badge: vm.finishRows.isEmpty ? 0 : vm.finishRows.count
+        ) {
             ForEach($vm.finishRows) { $row in
                 VStack(alignment: .leading, spacing: 8) {
                     Button {
@@ -380,8 +526,6 @@ struct QuoteCreateView: View {
             } label: {
                 Label("添加后整理", systemImage: "plus.circle")
             }
-        } header: {
-            Text("后整理明细")
         }
     }
 
@@ -501,6 +645,49 @@ struct QuoteCreateView: View {
     }
 }
 
+// MARK: - Collapsible Section
+
+private struct CollapsibleSection<Content: View>: View {
+    let title: String
+    @Binding var isExpanded: Bool
+    var badge: Int = 0
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        Section {
+            if isExpanded {
+                content()
+            }
+        } header: {
+            Button {
+                withAnimation(AppTheme.Animation.quick) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack {
+                    Text(title)
+                    if badge > 0 && !isExpanded {
+                        Text("\(badge) 项已填")
+                            .font(.caption2)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(AppTheme.Colors.primary.opacity(0.8))
+                            .cornerRadius(8)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(AppTheme.Colors.primary)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+            }
+            .textCase(nil)
+        }
+    }
+}
+
 // MARK: - Reusable Search Sheet
 
 private struct RefSearchSheet<T: Identifiable>: View {
@@ -575,6 +762,17 @@ final class QuoteCreateViewModel: ObservableObject {
     @Published var isSearchingMaterials = false
     @Published var isSearchingSuppliers = false
     @Published var isSearchingSizingProviders = false
+    @Published var isLoadingBOM = false
+
+    // Section expansion states
+    @Published var isSpecsExpanded = false
+    @Published var isProductionExpanded = false
+    @Published var isFinishExpanded = false
+    @Published var expandedMaterialRows: Set<UUID> = []
+
+    // Material change confirmation
+    @Published var showMaterialChangeConfirm = false
+    var pendingMaterial: MaterialRef?
 
     // Cached reference data
     @Published var salespeople: [SalespersonRef] = []
@@ -604,6 +802,9 @@ final class QuoteCreateViewModel: ObservableObject {
     @Published var source = ""
     @Published var deliveryDate = Date()
     @Published var orderQty = ""
+    @Published var quotePrice = ""
+    @Published var materialCostDisplay = ""
+    @Published var costPrice = ""
     @Published var remark = ""
 
     @Published var materialNo = ""
@@ -641,7 +842,9 @@ final class QuoteCreateViewModel: ObservableObject {
     private let mode: QuoteFormMode
     private let service = QuoteAPIService.shared
     private let authManager = QuoteAuthManager.shared
+    private let calculationConstants = CalculationConstants.defaultConstants
     private var searchTask: Task<Void, Never>?
+    private var calculationCancellables: Set<AnyCancellable> = []
     private var didApplyInitialFormValues = false
     private var reedType: String?
     private var currency: String?
@@ -650,6 +853,7 @@ final class QuoteCreateViewModel: ObservableObject {
 
     init(mode: QuoteFormMode) {
         self.mode = mode
+        setupDerivedCalculationBindings()
     }
 
     // MARK: - Computed
@@ -663,6 +867,17 @@ final class QuoteCreateViewModel: ObservableObject {
     var hasChanges: Bool {
         !customerName.isEmpty || !materialName.isEmpty
         || !materialRows.isEmpty || !finishRows.isEmpty
+    }
+
+    var specsFilledCount: Int {
+        [width, reedId, fastenerRange, sideLength, warpWastagePercent, beamTotalEnd, warpDensity, weftDensity]
+            .filter { !$0.isEmpty }.count
+    }
+
+    var productionFilledCount: Int {
+        [weaveSpeed, weaveEff, weaveDayOutput, weaveDayCost, weaveDaySaleCost]
+            .filter { !$0.isEmpty }.count
+        + (sizingProviderName.isEmpty ? 0 : 1)
     }
 
     var filteredSalespeople: [SalespersonRef] {
@@ -685,6 +900,275 @@ final class QuoteCreateViewModel: ObservableObject {
         guard !finishModeFilter.isEmpty else { return finishModes }
         let kw = finishModeFilter.lowercased()
         return finishModes.filter { $0.name.lowercased().contains(kw) }
+    }
+
+    private func setupDerivedCalculationBindings() {
+        let triggers: [AnyPublisher<Void, Never>] = [
+            $quotePrice.map { _ in () }.eraseToAnyPublisher(),
+            $width.map { _ in () }.eraseToAnyPublisher(),
+            $reedId.map { _ in () }.eraseToAnyPublisher(),
+            $fastenerRange.map { _ in () }.eraseToAnyPublisher(),
+            $sideLength.map { _ in () }.eraseToAnyPublisher(),
+            $warpWastagePercent.map { _ in () }.eraseToAnyPublisher(),
+            $beamTotalEnd.map { _ in () }.eraseToAnyPublisher(),
+            $weftDensity.map { _ in () }.eraseToAnyPublisher(),
+            $weaveSpeed.map { _ in () }.eraseToAnyPublisher(),
+            $weaveEff.map { _ in () }.eraseToAnyPublisher(),
+            $weaveDayOutput.map { _ in () }.eraseToAnyPublisher(),
+            $weaveDayCost.map { _ in () }.eraseToAnyPublisher(),
+            $weaveDaySaleCost.map { _ in () }.eraseToAnyPublisher(),
+            $sizingPrice.map { _ in () }.eraseToAnyPublisher(),
+            $sandingPrice.map { _ in () }.eraseToAnyPublisher(),
+            $materialRows.map { _ in () }.eraseToAnyPublisher()
+        ]
+
+        Publishers.MergeMany(triggers)
+            .debounce(for: .milliseconds(120), scheduler: RunLoop.main)
+            .sink { [weak self] in
+                self?.recalculateDerivedPricing()
+            }
+            .store(in: &calculationCancellables)
+    }
+
+    private func recalculateDerivedPricing() {
+        if let laborUnitCost = computedStandardLaborCost() {
+            stdWeavePrice = fmt(laborUnitCost)
+        } else {
+            stdWeavePrice = ""
+        }
+
+        if let weaveUnitCost = computedWeaveUnitCost() {
+            weavePrice = fmt(weaveUnitCost)
+        } else {
+            weavePrice = ""
+        }
+
+        let hasMaterialInputs = materialRows.contains { !isEmptyMaterialRow($0) }
+        let materialCost = calculatedMaterialCost()
+        if hasMaterialInputs && materialCost == nil {
+            materialCostDisplay = ""
+            costPrice = ""
+            profitRate = ""
+            return
+        }
+
+        materialCostDisplay = materialCost.map { fmt($0) } ?? ""
+
+        let sizingCost = dbl(sizingPrice) ?? 0
+        let sandingCost = dbl(sandingPrice) ?? 0
+        let standardLaborCost = dbl(stdWeavePrice) ?? 0
+        let totalCost = (materialCost ?? 0) + sizingCost + sandingCost + standardLaborCost
+        costPrice = totalCost > 0 ? fmt(totalCost) : ""
+
+        if let quote = dbl(quotePrice), quote > 0, totalCost > 0 {
+            profitRate = fmt(((quote / totalCost) - 1) * 100)
+        } else {
+            profitRate = ""
+        }
+    }
+
+    private func computedStandardLaborCost() -> Double? {
+        guard let dayCost = dbl(weaveDaySaleCost),
+              let dayOutput = dbl(weaveDayOutput),
+              dayOutput > 0 else {
+            return nil
+        }
+
+        return dayCost / dayOutput
+    }
+
+    private func computedWeaveUnitCost() -> Double? {
+        guard let dayMachineCost = dbl(weaveDayCost),
+              let dayOutput = dbl(weaveDayOutput),
+              dayOutput > 0 else {
+            return nil
+        }
+
+        return dayMachineCost / dayOutput
+    }
+
+    private func calculatedMaterialCost() -> Double? {
+        let materials = buildCalculationMaterials()
+        guard !materials.isEmpty else { return nil }
+
+        let warpWastage = dbl(warpWastagePercent) ?? 0
+        let warpShrinkageFactor = warpWastage < 100 ? 100.0 / (100.0 - warpWastage) : 1.0
+
+        let calculationResults = CalculationResults()
+        var alertMessage = ""
+        let success = Calculator.calculate(
+            boxNumber: reedId,
+            threading: fastenerRange,
+            fabricWidth: width,
+            edgeFinishing: sideLength.isEmpty ? "0" : sideLength,
+            fabricShrinkage: String(format: "%.4f", warpShrinkageFactor),
+            weftDensity: weftDensity,
+            machineSpeed: weaveSpeed,
+            efficiency: weaveEff,
+            dailyLaborCost: "0",
+            fixedCost: "0",
+            materials: materials,
+            constants: calculationConstants,
+            calculationResults: calculationResults,
+            warpEndsOverride: beamTotalEnd,
+            alertMessage: &alertMessage
+        )
+
+        guard success else { return nil }
+        return calculationResults.warpCost + calculationResults.weftCost
+    }
+
+    private func buildCalculationMaterials() -> [Material] {
+        var materials = materialRows.compactMap { row -> Material? in
+            guard !isEmptyMaterialRow(row) else { return nil }
+
+            let isWarp = normalizedUsage(row.usage) == "经纱"
+            let yarnType = resolvedYarnType(for: row)
+            let yarnValue = resolvedYarnValue(for: row, yarnType: yarnType)
+            let yarnPrice = resolvedCalculationPrice(for: row)
+            let ratio = resolvedMaterialRatio(for: row)
+            let materialName = row.materialName.isEmpty
+                ? (row.materialNo.isEmpty ? row.usage : row.materialNo)
+                : row.materialName
+
+            return Material(
+                name: materialName,
+                warpYarnValue: isWarp ? yarnValue : "0",
+                warpYarnTypeSelection: isWarp ? yarnType : .dNumber,
+                weftYarnValue: isWarp ? "0" : yarnValue,
+                weftYarnTypeSelection: isWarp ? .dNumber : yarnType,
+                warpYarnPrice: isWarp ? yarnPrice : "0",
+                weftYarnPrice: isWarp ? "0" : yarnPrice,
+                warpRatio: isWarp ? ratio : "0",
+                weftRatio: isWarp ? "0" : ratio,
+                ratio: "1"
+            )
+        }
+
+        ensureDirectionalRatios(on: &materials)
+        return materials
+    }
+
+    private func isEmptyMaterialRow(_ row: MaterialRowData) -> Bool {
+        [
+            row.materialName,
+            row.materialNo,
+            row.denierNum,
+            row.patternPerQty,
+            row.perCent,
+            row.unitPrice,
+            row.yarnPrice,
+            row.yarnCount,
+            row.remark
+        ].allSatisfy { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    private func resolvedYarnType(for row: MaterialRowData) -> YarnType {
+        if let denier = dbl(row.denierNum), denier > 0 {
+            return .dNumber
+        }
+
+        let rawValue = row.yarnCount.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if rawValue.contains("d") || rawValue.contains("旦") {
+            return .dNumber
+        }
+
+        return .yarnCount
+    }
+
+    private func resolvedYarnValue(for row: MaterialRowData, yarnType: YarnType) -> String {
+        switch yarnType {
+        case .dNumber:
+            if let denier = dbl(row.denierNum), denier > 0 {
+                return fmt(denier)
+            }
+            if let numeric = extractedNumericValue(from: row.yarnCount), numeric > 0 {
+                return fmt(numeric)
+            }
+        case .yarnCount:
+            if let numeric = extractedNumericValue(from: row.yarnCount), numeric > 0 {
+                return fmt(numeric)
+            }
+        }
+
+        return "0"
+    }
+
+    private func resolvedCalculationPrice(for row: MaterialRowData) -> String {
+        if let unitPrice = dbl(row.unitPrice), unitPrice > 0 {
+            return fmt(unitPrice)
+        }
+        if let processPrice = dbl(row.yarnPrice), processPrice > 0 {
+            return fmt(processPrice)
+        }
+        return "0"
+    }
+
+    private func resolvedMaterialRatio(for row: MaterialRowData) -> String {
+        if let percent = dbl(row.perCent), percent > 0 {
+            return fmt(percent)
+        }
+        if let pattern = int(row.patternPerQty), pattern > 0 {
+            return "\(pattern)"
+        }
+        return "1"
+    }
+
+    private func extractedNumericValue(from rawValue: String) -> Double? {
+        let cleaned = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return nil }
+        if let direct = Double(cleaned) {
+            return direct
+        }
+
+        let pattern = #"[-+]?[0-9]*\.?[0-9]+"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(cleaned.startIndex..<cleaned.endIndex, in: cleaned)
+        guard let match = regex.firstMatch(in: cleaned, range: range),
+              let matchedRange = Range(match.range, in: cleaned) else {
+            return nil
+        }
+
+        return Double(String(cleaned[matchedRange]))
+    }
+
+    private func ensureDirectionalRatios(on materials: inout [Material]) {
+        let totalWarp = materials.map { Double($0.warpRatio ?? "0") ?? 0 }.reduce(0, +)
+        let totalWeft = materials.map { Double($0.weftRatio ?? "0") ?? 0 }.reduce(0, +)
+        let warpIndices = materials.indices.filter { isWarpMaterial(materials[$0]) }
+        let weftIndices = materials.indices.filter { isWeftMaterial(materials[$0]) }
+
+        if totalWarp == 0 {
+            if warpIndices.isEmpty {
+                if let firstIndex = materials.indices.first {
+                    materials[firstIndex].warpRatio = "0.001"
+                }
+            } else {
+                for index in warpIndices {
+                    materials[index].warpRatio = "1"
+                }
+            }
+        }
+
+        if totalWeft == 0 {
+            if weftIndices.isEmpty {
+                if let firstIndex = materials.indices.first {
+                    materials[firstIndex].weftRatio = "0.001"
+                }
+            } else {
+                for index in weftIndices {
+                    materials[index].weftRatio = "1"
+                }
+            }
+        }
+    }
+
+    private func isWarpMaterial(_ material: Material) -> Bool {
+        (Double(material.warpYarnValue) ?? 0) > 0 || (Double(material.warpYarnPrice) ?? 0) > 0
+    }
+
+    private func isWeftMaterial(_ material: Material) -> Bool {
+        (Double(material.weftYarnValue) ?? 0) > 0 || (Double(material.weftYarnPrice) ?? 0) > 0
     }
 
     // MARK: - Load Initial
@@ -764,6 +1248,8 @@ final class QuoteCreateViewModel: ObservableObject {
             orderType = existingOrderType
         }
         orderQty = fmt(detail.orderQty)
+        quotePrice = fmt(detail.price)
+        costPrice = fmt(detail.costPrice)
         remark = detail.remark ?? ""
 
         materialNo = detail.materialNo ?? ""
@@ -831,7 +1317,41 @@ final class QuoteCreateViewModel: ObservableObject {
             )
         } ?? []
 
+        // In edit mode, expand specs/production if they have data
+        if specsFilledCount > 0 { isSpecsExpanded = true }
+        if productionFilledCount > 0 { isProductionExpanded = true }
+        if !finishRows.isEmpty { isFinishExpanded = true }
+
         didApplyInitialFormValues = true
+    }
+
+    // MARK: - BOM Auto-fill
+
+    func fetchAndApplyBOM(materialGuid: String) async {
+        isLoadingBOM = true
+        do {
+            let bom = try await service.fetchMaterialBOM(materialGuid: materialGuid)
+            materialRows = bom.yarns.map { yarn in
+                MaterialRowData(
+                    usage: yarn.usageDisplayName,
+                    materialName: yarn.materialName ?? "",
+                    materialNo: yarn.materialNo ?? "",
+                    denierNum: yarn.denierNum.map { fmt($0) } ?? "",
+                    patternPerQty: yarn.patternPerQty.map { "\($0)" } ?? "",
+                    perCent: yarn.percent.map { fmt($0) } ?? "",
+                    unitPrice: "",
+                    yarnPrice: "",
+                    providerName: yarn.suggestedSupplier?.name ?? "",
+                    providerNo: yarn.suggestedSupplier?.code ?? "",
+                    yarnCount: yarn.yarnCount ?? "",
+                    remark: ""
+                )
+            }
+        } catch {
+            alertMessage = "加载原料配方失败: \(error.localizedDescription)"
+            showAlert = true
+        }
+        isLoadingBOM = false
     }
 
     // MARK: - Debounced Search
@@ -892,6 +1412,34 @@ final class QuoteCreateViewModel: ObservableObject {
     }
 
     func applyMaterial(_ m: MaterialRef) {
+        let isEditing: Bool
+        if case .edit = mode { isEditing = true } else { isEditing = false }
+        let hasMaterialRows = !materialRows.isEmpty
+
+        if isEditing && hasMaterialRows && materialGuid != m.guid {
+            pendingMaterial = m
+            showMaterialChangeConfirm = true
+            activeSheet = nil
+            return
+        }
+
+        applyMaterialFields(m)
+        activeSheet = nil
+
+        if let guid = m.guid as String? {
+            Task { await fetchAndApplyBOM(materialGuid: guid) }
+        }
+    }
+
+    func confirmMaterialChange(_ m: MaterialRef) {
+        applyMaterialFields(m)
+        pendingMaterial = nil
+        if let guid = m.guid as String? {
+            Task { await fetchAndApplyBOM(materialGuid: guid) }
+        }
+    }
+
+    private func applyMaterialFields(_ m: MaterialRef) {
         materialNo = m.materialNo ?? ""
         materialName = m.materialName ?? ""
         materialGuid = m.guid
@@ -908,11 +1456,10 @@ final class QuoteCreateViewModel: ObservableObject {
         weaveSpeed = m.weaveSpeed.map { fmt($0) } ?? ""
         weaveEff = m.weaveEff.map { fmt($0) } ?? ""
         weaveDayOutput = m.weaveDayOutput.map { fmt($0) } ?? ""
+        weaveDayCost = m.weaveDayCost.map { fmt($0) } ?? ""
 
         weavePrice = m.weavePrice.map { fmt($0) } ?? ""
         sizingPrice = m.sizingPrice.map { fmt($0) } ?? ""
-
-        activeSheet = nil
     }
 
     func applySalesperson(_ s: SalespersonRef) {
@@ -982,6 +1529,8 @@ final class QuoteCreateViewModel: ObservableObject {
             weaveDayOutput: dbl(weaveDayOutput),
             weaveDayCost: dbl(weaveDayCost),
             weaveDaySaleCost: dbl(weaveDaySaleCost),
+            price: dbl(quotePrice),
+            costPrice: dbl(costPrice),
             weavePrice: dbl(weavePrice),
             sizingPrice: dbl(sizingPrice),
             sandingPrice: dbl(sandingPrice),

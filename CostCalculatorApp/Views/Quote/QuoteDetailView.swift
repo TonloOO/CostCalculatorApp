@@ -183,6 +183,7 @@ struct QuoteDetailView: View {
                 DetailCell(label: "车速", value: fmtDec(d.weaveSpeed))
                 DetailCell(label: "综合效率%", value: fmtDec(d.weaveEff))
                 DetailCell(label: "织造日产量", value: fmtDec(d.weaveDayOutput))
+                DetailCell(label: "日机台成本", value: fmtPrice(d.weaveDayCost))
                 DetailCell(label: "织造日工费", value: fmtPrice(d.weaveDaySaleCost))
                 DetailCell(label: "浆纱供应商", value: d.sizingProviderName)
             }
@@ -288,7 +289,8 @@ struct QuoteDetailView: View {
 
                         HStack(spacing: AppTheme.Spacing.medium) {
                             materialMetric("原料成本", fmtPrice(m.dtlYarnCost))
-                            materialMetric("加工价", fmtPrice(m.yarnPrice))
+                            materialMetric("原料单价", fmtPrice(m.yarnPrice))
+                            materialMetric("加工价", fmtPrice(m.unitPrice))
                             if let provider = m.providerName, !provider.isEmpty {
                                 materialMetric("供应商", provider)
                             }
@@ -370,7 +372,7 @@ struct QuoteDetailView: View {
                     highlightedTotalCost(result.totalCost)
                     DetailGrid {
                         DetailCell(label: "日产量", value: String(format: "%.2f 米", result.dailyProduct))
-                        DetailCell(label: "织造工费", value: String(format: "¥%.4f", result.laborCost))
+                        DetailCell(label: "标准工费", value: String(format: "¥%.4f", result.laborCost))
                         DetailCell(label: "经纱成本", value: String(format: "¥%.4f", result.warpCost))
                         DetailCell(label: "纬纱成本", value: String(format: "¥%.4f", result.weftCost))
                         DetailCell(label: "浆纱费", value: String(format: "¥%.4f", result.warpingCost))
