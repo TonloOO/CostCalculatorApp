@@ -347,6 +347,7 @@ struct MaterialRef: Codable, Identifiable, Hashable {
     let reedId: Double?
     let fastenerRange: Double?
     let reedType: String?
+    let sideLength: Double?
     let weaveSpeed: Double?
     let weaveEff: Double?
     let weaveDayOutput: Double?

@@ -638,7 +638,7 @@ struct QuoteOverviewCard: View {
     
     private func formatPrice(_ value: Double?) -> String {
         guard let v = value else { return "-" }
-        return String(format: "¥%.0f", v)
+        return String(format: "¥%.2f", v)
     }
 
     

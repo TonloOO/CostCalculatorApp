@@ -1452,6 +1452,7 @@ final class QuoteCreateViewModel: ObservableObject {
         warpWastagePercent = m.warpWastagePercent.map { fmt($0) } ?? ""
         reedId = m.reedId.map { fmt($0) } ?? ""
         fastenerRange = m.fastenerRange.map { fmt($0) } ?? ""
+        sideLength = m.sideLength.map { fmt($0) } ?? ""
 
         weaveSpeed = m.weaveSpeed.map { fmt($0) } ?? ""
         weaveEff = m.weaveEff.map { fmt($0) } ?? ""
