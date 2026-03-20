@@ -13,6 +13,7 @@ struct QuoteDetailView: View {
     @StateObject private var viewModel = QuoteDetailViewModel()
     @Environment(\.dismiss) private var dismiss
     @State private var showEditQuote = false
+    @State private var showReferenceQuote = false
 
     var body: some View {
         NavigationView {
@@ -31,7 +32,14 @@ struct QuoteDetailView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("关闭") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    Button {
+                        showReferenceQuote = true
+                    } label: {
+                        Image(systemName: "square.on.square")
+                    }
+                    .accessibilityLabel("引用报价单")
+
                     if viewModel.detail?.normalizedStatus == .editing {
                         Button("编辑") { showEditQuote = true }
                             .fontWeight(.semibold)
@@ -52,6 +60,11 @@ struct QuoteDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showReferenceQuote) {
+            if let detail = viewModel.detail {
+                QuoteCreateView(mode: .reference(detail))
+            }
+        }
     }
 
     // MARK: - Detail Content
@@ -60,12 +73,9 @@ struct QuoteDetailView: View {
         ScrollView {
             VStack(spacing: AppTheme.Spacing.medium) {
                 headerSection(detail)
-                calculationSection(detail)
-                basicInfoSection(detail)
                 specsSection(detail)
                 productionSection(detail)
                 pricingSection(detail)
-                costBreakdownSection(detail)
                 materialsSection(detail)
                 finishSection(detail)
             }
@@ -82,13 +92,13 @@ struct QuoteDetailView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(d.quoteNo)
-                        .font(AppTheme.Typography.title2)
+                        .font(AppTheme.Typography.title1)
                         .fontWeight(.bold)
                         .foregroundColor(AppTheme.Colors.primaryText)
 
                     if let name = d.materialName, !name.isEmpty {
                         Text(name)
-                            .font(AppTheme.Typography.subheadline)
+                            .font(AppTheme.Typography.body)
                             .foregroundColor(AppTheme.Colors.secondaryText)
                     }
                 }
@@ -97,7 +107,7 @@ struct QuoteDetailView: View {
 
                 if let statusText = d.normalizedStatus?.label ?? d.status {
                     Text(statusText)
-                        .font(AppTheme.Typography.footnote)
+                        .font(AppTheme.Typography.body)
                         .fontWeight(.semibold)
                         .foregroundColor(statusColor(d.normalizedStatus))
                         .padding(.horizontal, 12)
@@ -116,7 +126,7 @@ struct QuoteDetailView: View {
                     Text(String(format: "¥%.2f", price))
                         .font(AppTheme.Typography.title2)
                         .fontWeight(.bold)
-                        .foregroundColor(AppTheme.Colors.accent)
+                        .foregroundColor(AppTheme.Colors.primary)
                 }
             }
         }
@@ -144,11 +154,11 @@ struct QuoteDetailView: View {
             if let remark = d.remark, !remark.isEmpty {
                 HStack(alignment: .top) {
                     Text("备注")
-                        .font(AppTheme.Typography.caption1)
+                        .font(AppTheme.Typography.body)
                         .foregroundColor(AppTheme.Colors.tertiaryText)
-                        .frame(width: 60, alignment: .leading)
+                        .frame(width: 72, alignment: .leading)
                     Text(remark)
-                        .font(AppTheme.Typography.footnote)
+                        .font(AppTheme.Typography.body)
                         .foregroundColor(AppTheme.Colors.primaryText)
                     Spacer()
                 }
@@ -162,14 +172,12 @@ struct QuoteDetailView: View {
     private func specsSection(_ d: QuoteDetail) -> some View {
         DetailSection(title: "规格参数", icon: "ruler") {
             DetailGrid {
-                DetailCell(label: "成品门幅", value: fmtDec(d.width))
                 DetailCell(label: "筘号", value: fmtDec(d.reedId))
                 DetailCell(label: "筘幅", value: fmtDec(d.fastenerRange))
                 DetailCell(label: "筘入", value: d.reedType)
                 DetailCell(label: "废边长度cm", value: fmtDec(d.sideLength))
                 DetailCell(label: "经缩%", value: fmtDec(d.warpWastagePercent))
                 DetailCell(label: "总经根数", value: d.beamTotalEnd.map { "\($0)" })
-                DetailCell(label: "经密", value: fmtDec(d.warpDensity))
                 DetailCell(label: "纬密", value: fmtDec(d.weftDensity))
             }
         }
@@ -244,67 +252,75 @@ struct QuoteDetailView: View {
         return AnyView(
             DetailSection(title: "原料成本", icon: "tablecells") {
                 ForEach(materials) { m in
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
                         HStack {
-                            Text("#\(m.rowNo ?? 0)")
-                                .font(AppTheme.Typography.caption2)
-                                .foregroundColor(AppTheme.Colors.tertiaryText)
-                                .frame(width: 24)
-
                             if let usage = normalizedUsageLabel(m.usage) {
                                 Text(usage)
-                                    .font(AppTheme.Typography.caption1)
+                                    .font(AppTheme.Typography.footnote)
                                     .fontWeight(.medium)
                                     .foregroundColor(isWarpUsage(m.usage) ? AppTheme.Colors.primary : AppTheme.Colors.accent)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
                                     .background(
                                         (isWarpUsage(m.usage) ? AppTheme.Colors.primary : AppTheme.Colors.accent).opacity(0.1)
                                     )
-                                    .cornerRadius(4)
+                                    .cornerRadius(6)
                             }
-
-                            Text(m.materialName ?? "-")
-                                .font(AppTheme.Typography.footnote)
-                                .fontWeight(.medium)
-                                .foregroundColor(AppTheme.Colors.primaryText)
-                                .lineLimit(1)
 
                             Spacer()
 
                             if let no = m.materialNo, !no.isEmpty {
                                 Text(no)
-                                    .font(AppTheme.Typography.caption2)
+                                    .font(AppTheme.Typography.footnote)
                                     .foregroundColor(AppTheme.Colors.tertiaryText)
                             }
                         }
 
-                        HStack(spacing: AppTheme.Spacing.medium) {
+                        HStack(alignment: .top, spacing: AppTheme.Spacing.medium) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(m.materialName ?? "-")
+                                    .font(AppTheme.Typography.body)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(AppTheme.Colors.primaryText)
+                                if let provider = m.providerName, !provider.isEmpty {
+                                    Text(provider)
+                                        .font(AppTheme.Typography.footnote)
+                                        .foregroundColor(AppTheme.Colors.secondaryText)
+                                }
+                            }
+
+                            Spacer()
+
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text("原料成本")
+                                    .font(AppTheme.Typography.footnote)
+                                    .foregroundColor(AppTheme.Colors.primary)
+                                Text(fmtPrice(m.dtlYarnCost))
+                                    .font(AppTheme.Typography.title3)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(AppTheme.Colors.primary)
+                            }
+                        }
+
+                        DetailGrid {
                             materialMetric(materialSpecLabel(for: m), materialSpecValue(for: m))
                             materialMetric("用纱量", fmtDec(m.yarnUseQty))
                             materialMetric("根数", m.patternPerQty.map { "\($0)" } ?? "-")
                             materialMetric("占比%", fmtDec(m.perCent))
                             materialMetric("用量kg", fmtDec(m.orderYarnQty))
-                        }
-
-                        HStack(spacing: AppTheme.Spacing.medium) {
-                            materialMetric("原料成本", fmtPrice(m.dtlYarnCost))
-                            materialMetric("原料单价", fmtPrice(m.yarnPrice))
-                            materialMetric("加工价", fmtPrice(m.unitPrice))
-                            if let provider = m.providerName, !provider.isEmpty {
-                                materialMetric("供应商", provider)
-                            }
+                            materialMetric("原料单价", fmtPrice(m.unitPrice))
+                            materialMetric("加工单价", fmtPrice(m.yarnPrice))
                         }
 
                         if let remark = m.remark, !remark.isEmpty {
                             Text(remark)
-                                .font(AppTheme.Typography.caption2)
+                                .font(AppTheme.Typography.footnote)
                                 .foregroundColor(AppTheme.Colors.tertiaryText)
                         }
                     }
-                    .padding(AppTheme.Spacing.small)
-                    .background(AppTheme.Colors.secondaryBackground.opacity(0.5))
-                    .cornerRadius(AppTheme.CornerRadius.small)
+                    .padding(AppTheme.Spacing.medium)
+                    .background(AppTheme.Colors.secondaryBackground.opacity(0.55))
+                    .cornerRadius(AppTheme.CornerRadius.medium)
                 }
             }
         )
@@ -343,46 +359,6 @@ struct QuoteDetailView: View {
         )
     }
 
-    // MARK: - Calculation
-
-    private func calculationSection(_ detail: QuoteDetail) -> some View {
-        guard detail.normalizedStatus == .editing else {
-            return AnyView(EmptyView())
-        }
-
-        return AnyView(
-            VStack(spacing: AppTheme.Spacing.small) {
-            Button(action: {
-                viewModel.runCalculation()
-            }) {
-                HStack {
-                    Image(systemName: "function")
-                    Text("重新计算")
-                        .fontWeight(.semibold)
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, AppTheme.Spacing.medium)
-                .background(AppTheme.Colors.primaryGradient)
-                .cornerRadius(AppTheme.CornerRadius.medium)
-            }
-
-            if let result = viewModel.calcResult {
-                DetailSection(title: "计算结果", icon: "checkmark.circle") {
-                    highlightedTotalCost(result.totalCost)
-                    DetailGrid {
-                        DetailCell(label: "日产量", value: String(format: "%.2f 米", result.dailyProduct))
-                        DetailCell(label: "标准工费", value: String(format: "¥%.4f", result.laborCost))
-                        DetailCell(label: "经纱成本", value: String(format: "¥%.4f", result.warpCost))
-                        DetailCell(label: "纬纱成本", value: String(format: "¥%.4f", result.weftCost))
-                        DetailCell(label: "浆纱费", value: String(format: "¥%.4f", result.warpingCost))
-                    }
-                }
-            }
-        }
-        )
-    }
-
     // MARK: - Error
 
     private func errorContent(_ message: String) -> some View {
@@ -404,42 +380,15 @@ struct QuoteDetailView: View {
     // MARK: - Helpers
 
     private func materialMetric(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.system(size: 9))
+                .font(AppTheme.Typography.footnote)
                 .foregroundColor(AppTheme.Colors.tertiaryText)
             Text(value)
-                .font(AppTheme.Typography.caption1)
+                .font(AppTheme.Typography.body)
+                .fontWeight(.medium)
                 .foregroundColor(AppTheme.Colors.primaryText)
         }
-    }
-
-    private func highlightedTotalCost(_ totalCost: Double) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("总成本")
-                    .font(AppTheme.Typography.caption1)
-                    .foregroundColor(AppTheme.Colors.primary.opacity(0.8))
-                Text(String(format: "¥%.4f", totalCost))
-                    .font(AppTheme.Typography.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(AppTheme.Colors.primary)
-            }
-
-            Spacer()
-
-            Image(systemName: "sparkles")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(AppTheme.Colors.primary)
-        }
-        .padding(AppTheme.Spacing.medium)
-        .background(AppTheme.Colors.primary.opacity(0.08))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
-                .stroke(AppTheme.Colors.primary.opacity(0.18), lineWidth: 1)
-        )
-        .cornerRadius(AppTheme.CornerRadius.medium)
-        .padding(.bottom, 4)
     }
 
     private func statusColor(_ status: QuoteStatus?) -> Color {
@@ -527,19 +476,20 @@ private struct DetailSection<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 14))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(AppTheme.Colors.primary)
                 Text(title)
-                    .font(AppTheme.Typography.headline)
+                    .font(AppTheme.Typography.title3)
+                    .fontWeight(.semibold)
                     .foregroundColor(AppTheme.Colors.primaryText)
             }
 
             content
         }
-        .padding(AppTheme.Spacing.medium)
+        .padding(AppTheme.Spacing.large)
         .background(AppTheme.Colors.background)
         .cornerRadius(AppTheme.CornerRadius.medium)
     }
@@ -565,12 +515,13 @@ private struct DetailCell: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .font(AppTheme.Typography.caption2)
+                .font(AppTheme.Typography.footnote)
                 .foregroundColor(AppTheme.Colors.tertiaryText)
             Text(value ?? "-")
-                .font(AppTheme.Typography.footnote)
+                .font(AppTheme.Typography.body)
+                .fontWeight(.medium)
                 .foregroundColor(AppTheme.Colors.primaryText)
-                .lineLimit(2)
+                .lineLimit(3)
         }
     }
 }
@@ -591,7 +542,8 @@ final class QuoteDetailViewModel: ObservableObject {
         let laborCost: Double
         let warpCost: Double
         let weftCost: Double
-        let warpingCost: Double
+        let sizingCost: Double
+        let sandingCost: Double
         let totalCost: Double
     }
 
@@ -615,7 +567,7 @@ final class QuoteDetailViewModel: ObservableObject {
 
         let materials = buildMaterials(from: d)
         guard !materials.isEmpty else {
-            calcResult = CalcOutput(dailyProduct: 0, laborCost: 0, warpCost: 0, weftCost: 0, warpingCost: 0, totalCost: 0)
+            calcResult = CalcOutput(dailyProduct: 0, laborCost: 0, warpCost: 0, weftCost: 0, sizingCost: 0, sandingCost: 0, totalCost: 0)
             return
         }
 
@@ -625,15 +577,15 @@ final class QuoteDetailViewModel: ObservableObject {
         var alertMsg = ""
         let success = Calculator.calculate(
             boxNumber: fmt(d.reedId),
-            threading: fmt(d.fastenerRange),
-            fabricWidth: fmt(d.width),
+            threading: resolvedCalculationThreading(from: d),
+            fabricWidth: fmt(d.fastenerRange),
             edgeFinishing: fmt(d.sideLength),
             fabricShrinkage: String(format: "%.4f", warpShrinkageFactor),
             weftDensity: fmt(d.weftDensity),
             machineSpeed: fmt(d.weaveSpeed),
             efficiency: fmt(d.weaveEff),
-            dailyLaborCost: fmt(d.weaveDaySaleCost),
-            fixedCost: fmt(d.sizingPrice),
+            dailyLaborCost: "0",
+            fixedCost: "0",
             materials: materials,
             constants: constants,
             calculationResults: calcResults,
@@ -642,13 +594,20 @@ final class QuoteDetailViewModel: ObservableObject {
         )
 
         if success {
+            let dailyProduct = d.weaveDayOutput ?? 0
+            let laborCost = standardLaborCost(from: d) ?? 0
+            let sizingCost = d.sizingPrice ?? 0
+            let sandingCost = d.sandingPrice ?? 0
+            let totalCost = calcResults.warpCost + calcResults.weftCost + sizingCost + sandingCost + laborCost
+
             calcResult = CalcOutput(
-                dailyProduct: calcResults.dailyProduct,
-                laborCost: calcResults.laborCost,
+                dailyProduct: dailyProduct,
+                laborCost: laborCost,
                 warpCost: calcResults.warpCost,
                 weftCost: calcResults.weftCost,
-                warpingCost: calcResults.warpingCost,
-                totalCost: calcResults.totalCost
+                sizingCost: sizingCost,
+                sandingCost: sandingCost,
+                totalCost: totalCost
             )
         } else {
             calcResult = nil
@@ -724,17 +683,8 @@ final class QuoteDetailViewModel: ObservableObject {
     }
 
     private func resolvedMaterialPrice(for material: QuoteDetailMaterial) -> String {
-        let yarnPrice = material.yarnPrice ?? 0
         let unitPrice = material.unitPrice ?? 0
-        let chosenPrice: Double
-        if yarnPrice > 0 {
-            chosenPrice = yarnPrice
-        } else if unitPrice > 0 {
-            chosenPrice = unitPrice
-        } else {
-            chosenPrice = material.dtlYarnCost ?? 0
-        }
-        return String(format: "%.2f", chosenPrice)
+        return unitPrice > 0 ? String(format: "%.2f", unitPrice) : "0"
     }
 
     private func resolvedMaterialRatio(for material: QuoteDetailMaterial) -> String {
@@ -773,6 +723,25 @@ final class QuoteDetailViewModel: ObservableObject {
         }
 
         return Double(String(rawValue[range]))
+    }
+
+    private func resolvedCalculationThreading(from detail: QuoteDetail) -> String {
+        guard let numeric = extractedNumericValue(from: detail.reedType),
+              numeric > 0 else {
+            return ""
+        }
+
+        return String(format: "%.4f", numeric)
+    }
+
+    private func standardLaborCost(from detail: QuoteDetail) -> Double? {
+        guard let dayCost = detail.weaveDaySaleCost,
+              let dayOutput = detail.weaveDayOutput,
+              dayOutput > 0 else {
+            return nil
+        }
+
+        return dayCost / dayOutput
     }
 
     private func isWarpUsage(_ usage: String?) -> Bool {

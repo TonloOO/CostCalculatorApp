@@ -92,8 +92,10 @@ struct QuoteMaterial: Codable, Identifiable {
     let materialName: String?
     let providerName: String?
     let unitPrice: Double?
+    let yarnUseQty: Double?
+    let dtlYarnCost: Double?
     
-    var id: String { "\(usage ?? "")-\(materialName ?? "")-\(providerName ?? "")-\(unitPrice ?? 0)" }
+    var id: String { "\(usage ?? "")-\(materialName ?? "")-\(providerName ?? "")-\(unitPrice ?? 0)-\(yarnUseQty ?? 0)-\(dtlYarnCost ?? 0)" }
 }
 
 // MARK: - Quote Approval

@@ -288,7 +288,6 @@ struct QuoteOverviewCard: View {
     let onDetailUpdated: () -> Void
     let onAction: (QuoteApprovalAction) -> Void
 
-    @State private var isExpanded = false
     @State private var showWeavePattern = false
     @State private var showDetail = false
     @State private var pendingAction: QuoteApprovalAction?
@@ -306,19 +305,14 @@ struct QuoteOverviewCard: View {
                 .padding(.horizontal, AppTheme.Spacing.medium)
             
             keyMetricsGrid
-            
-            if isExpanded {
-                expandedContent
-                    .transition(.opacity)
-            }
+
+            expandedContent
 
             if !availableActions.isEmpty {
                 Divider()
                     .padding(.horizontal, AppTheme.Spacing.medium)
                 actionBar
             }
-            
-            expandToggle
         }
         .background(AppTheme.Colors.background)
         .cornerRadius(AppTheme.CornerRadius.medium)
@@ -375,7 +369,7 @@ struct QuoteOverviewCard: View {
                             .foregroundColor(AppTheme.Colors.tertiaryText)
                         Text(String(format: "¥%.2f", price))
                             .font(AppTheme.Typography.title3)
-                            .foregroundColor(AppTheme.Colors.accent)
+                            .foregroundColor(AppTheme.Colors.primary)
                             .fontWeight(.bold)
                     }
                 }
@@ -415,7 +409,7 @@ struct QuoteOverviewCard: View {
             GridItem(.flexible())
         ], spacing: AppTheme.Spacing.small) {
             MetricItem(label: "订单数量", value: formatNumber(quote.orderQty), icon: "shippingbox")
-            MetricItem(label: "成品门幅", value: formatDecimal(quote.width), icon: "ruler")
+            MetricItem(label: "成品门幅(存档)", value: formatDecimal(quote.width), icon: "ruler")
             MetricItem(label: "纬密", value: formatDecimal(quote.weftDensity), icon: "lines.measurement.horizontal")
             MetricItem(label: "总经根数", value: formatInt(quote.beamTotalEnd), icon: "number")
             MetricItem(label: "成本价", value: formatPrice(quote.costPrice), icon: "sum")
@@ -429,49 +423,73 @@ struct QuoteOverviewCard: View {
     // MARK: - Expanded Content
     
     private var expandedContent: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
-            Divider()
-                .padding(.horizontal, AppTheme.Spacing.medium)
+        guard let materials = quote.materials, !materials.isEmpty else {
+            return AnyView(EmptyView())
+        }
 
-            if let materials = quote.materials, !materials.isEmpty {
+        return AnyView(
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
+                Divider()
+                    .padding(.horizontal, AppTheme.Spacing.medium)
+
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
                     Text("原料明细")
                         .font(AppTheme.Typography.caption1)
                         .fontWeight(.semibold)
                         .foregroundColor(AppTheme.Colors.primaryText)
                         .padding(.horizontal, AppTheme.Spacing.medium)
-                    
+
                     ForEach(materials) { material in
-                        HStack {
-                            usageBadge(material.usage)
-                            
-                            Text(material.materialName ?? "-")
-                                .font(AppTheme.Typography.footnote)
-                                .foregroundColor(AppTheme.Colors.primaryText)
-                            
-                            Spacer()
-                            
-                            if let provider = material.providerName {
-                                Text(provider)
-                                    .font(AppTheme.Typography.caption2)
-                                    .foregroundColor(AppTheme.Colors.tertiaryText)
-                            }
-                            
-                            if let price = material.unitPrice {
-                                Text(String(format: "¥%.2f", price))
-                                    .font(AppTheme.Typography.footnote)
-                                    .foregroundColor(AppTheme.Colors.secondaryText)
-                                    .fontWeight(.medium)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .top, spacing: 8) {
+                                usageBadge(material.usage)
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(material.materialName ?? "-")
+                                        .font(AppTheme.Typography.footnote)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(AppTheme.Colors.primaryText)
+
+                                    HStack(spacing: 8) {
+                                        if let provider = material.providerName, !provider.isEmpty {
+                                            Text(provider)
+                                                .font(AppTheme.Typography.caption2)
+                                                .foregroundColor(AppTheme.Colors.tertiaryText)
+                                        }
+
+                                        if let yarnUseQty = material.yarnUseQty {
+                                            Text(String(format: "用纱量 %.2f", yarnUseQty))
+                                                .font(AppTheme.Typography.caption2)
+                                                .foregroundColor(AppTheme.Colors.secondaryText)
+                                        }
+                                    }
+                                }
+
+                                Spacer()
+
+                                VStack(alignment: .trailing, spacing: 3) {
+                                    if let price = material.unitPrice {
+                                        Text(String(format: "原料单价 ¥%.2f", price))
+                                            .font(AppTheme.Typography.caption2)
+                                            .foregroundColor(AppTheme.Colors.secondaryText)
+                                            .fontWeight(.medium)
+                                    }
+
+                                    Text(materialCostText(material.dtlYarnCost))
+                                        .font(AppTheme.Typography.caption2)
+                                        .foregroundColor(AppTheme.Colors.primary)
+                                        .fontWeight(.semibold)
+                                }
                             }
                         }
                         .padding(.horizontal, AppTheme.Spacing.medium)
-                        .padding(.vertical, 3)
+                        .padding(.vertical, 4)
                     }
                 }
                 .padding(.vertical, AppTheme.Spacing.xSmall)
                 .background(AppTheme.Colors.secondaryBackground.opacity(0.5))
             }
-        }
+        )
     }
 
     // MARK: - Action Bar
@@ -526,44 +544,6 @@ struct QuoteOverviewCard: View {
         .padding(AppTheme.Spacing.medium)
     }
     
-    // MARK: - Expand Toggle
-    
-    private var expandToggle: some View {
-        Button(action: {
-            withAnimation(AppTheme.Animation.quick) {
-                isExpanded.toggle()
-            }
-        }) {
-            HStack {
-                Spacer()
-
-                HStack(spacing: 4) {
-                    ZStack {
-                        Text("展开详情")
-                            .opacity(isExpanded ? 0 : 1)
-                        Text("收起")
-                            .opacity(isExpanded ? 1 : 0)
-                    }
-                    .font(AppTheme.Typography.caption1)
-                    .animation(AppTheme.Animation.quick, value: isExpanded)
-
-                    ZStack {
-                        Image(systemName: "chevron.down")
-                            .opacity(isExpanded ? 0 : 1)
-                        Image(systemName: "chevron.up")
-                            .opacity(isExpanded ? 1 : 0)
-                    }
-                    .font(.system(size: 11))
-                    .animation(AppTheme.Animation.quick, value: isExpanded)
-                }
-
-                Spacer()
-            }
-            .foregroundColor(AppTheme.Colors.primary)
-            .padding(.vertical, AppTheme.Spacing.xSmall)
-        }
-    }
-
     // MARK: - Helpers
 
     @ViewBuilder
@@ -587,6 +567,11 @@ struct QuoteOverviewCard: View {
                 .fill(AppTheme.Colors.primary.opacity(0.6))
                 .frame(width: 6, height: 6)
         }
+    }
+
+    private func materialCostText(_ value: Double?) -> String {
+        guard let value else { return "原料成本 -" }
+        return String(format: "原料成本 ¥%.2f", value)
     }
 
     private func isWarpUsage(_ usage: String?) -> Bool {

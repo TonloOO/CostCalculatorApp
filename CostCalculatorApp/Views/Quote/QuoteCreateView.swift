@@ -57,6 +57,7 @@ enum QuoteFormSheet: Identifiable {
 enum QuoteFormMode {
     case create
     case edit(QuoteDetail)
+    case reference(QuoteDetail)
 
     var navigationTitle: String {
         switch self {
@@ -64,6 +65,8 @@ enum QuoteFormMode {
             return "新建报价单"
         case .edit:
             return "编辑报价单"
+        case .reference:
+            return "引用报价单"
         }
     }
 
@@ -73,6 +76,8 @@ enum QuoteFormMode {
             return "创建"
         case .edit:
             return "更新"
+        case .reference:
+            return "创建"
         }
     }
 
@@ -82,6 +87,8 @@ enum QuoteFormMode {
             return nil
         case .edit(let detail):
             return detail.quoteNo
+        case .reference:
+            return nil
         }
     }
 }
@@ -230,7 +237,7 @@ struct QuoteCreateView: View {
                 }
                 .font(.caption)
             } else if vm.materialGuid != nil && !vm.materialRows.isEmpty {
-                Text("原料配方已自动填充，请确认单价、供应商和日工费")
+                Text("原料配方已自动填充，请确认单价、供应商和日产量")
             }
         }
     }
@@ -455,14 +462,18 @@ struct QuoteCreateView: View {
             isExpanded: $vm.isSpecsExpanded,
             badge: vm.specsFilledCount
         ) {
-            numField("成品门幅", text: $vm.width)
+            numField("成品门幅(存档)", text: $vm.width)
             numField("筘号", text: $vm.reedId)
             numField("筘幅", text: $vm.fastenerRange)
+            infoRow("筘入", vm.reedTypeDisplay)
             numField("废边长度(cm)", text: $vm.sideLength)
             numField("经缩%", text: $vm.warpWastagePercent)
             numField("总经根数", text: $vm.beamTotalEnd)
             numField("经密", text: $vm.warpDensity)
             numField("纬密", text: $vm.weftDensity)
+            Text("成本计算只使用筘号、筘入、筘幅；成品门幅仅随报价单保存，不参与成本计算。")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
     }
 
@@ -478,11 +489,12 @@ struct QuoteCreateView: View {
             numField("综合效率%", text: $vm.weaveEff)
             numField("日产量", text: $vm.weaveDayOutput)
             numField("日机台成本", text: $vm.weaveDayCost)
-            numField("日工费", text: $vm.weaveDaySaleCost)
 
             pickerRow("浆纱供应商", value: vm.sizingProviderName.isEmpty ? nil : vm.sizingProviderName) {
                 vm.activeSheet = .sizingProvider
             }
+
+            infoRow("日工费", vm.weaveDaySaleCost.isEmpty ? "自动计算" : vm.weaveDaySaleCost)
         }
     }
 
@@ -550,7 +562,15 @@ struct QuoteCreateView: View {
                 items: vm.materialResults,
                 isSearching: vm.isSearchingMaterials,
                 display: { $0.displayLabel },
-                subtitle: { [$0.component, $0.width.map { "门幅\($0)" }].compactMap { $0 }.joined(separator: " · ") },
+                subtitle: {
+                    [
+                        $0.component,
+                        $0.fastenerRange.map { "筘幅\($0)" },
+                        $0.width.map { "成品门幅\($0)" }
+                    ]
+                    .compactMap { $0 }
+                    .joined(separator: " · ")
+                },
                 onSearch: { vm.searchMaterials(keyword: $0) },
                 onSelect: { vm.applyMaterial($0) }
             )
@@ -846,7 +866,7 @@ final class QuoteCreateViewModel: ObservableObject {
     private var searchTask: Task<Void, Never>?
     private var calculationCancellables: Set<AnyCancellable> = []
     private var didApplyInitialFormValues = false
-    private var reedType: String?
+    @Published var reedType: String?
     private var currency: String?
     private var materialTypeName: String?
     private var weaveType: String?
@@ -872,6 +892,12 @@ final class QuoteCreateViewModel: ObservableObject {
     var specsFilledCount: Int {
         [width, reedId, fastenerRange, sideLength, warpWastagePercent, beamTotalEnd, warpDensity, weftDensity]
             .filter { !$0.isEmpty }.count
+        + (reedTypeDisplay == "由物料档案带入" ? 0 : 1)
+    }
+
+    var reedTypeDisplay: String {
+        let value = reedType?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return value.isEmpty ? "由物料档案带入" : value
     }
 
     var productionFilledCount: Int {
@@ -905,8 +931,8 @@ final class QuoteCreateViewModel: ObservableObject {
     private func setupDerivedCalculationBindings() {
         let triggers: [AnyPublisher<Void, Never>] = [
             $quotePrice.map { _ in () }.eraseToAnyPublisher(),
-            $width.map { _ in () }.eraseToAnyPublisher(),
             $reedId.map { _ in () }.eraseToAnyPublisher(),
+            $reedType.map { _ in () }.eraseToAnyPublisher(),
             $fastenerRange.map { _ in () }.eraseToAnyPublisher(),
             $sideLength.map { _ in () }.eraseToAnyPublisher(),
             $warpWastagePercent.map { _ in () }.eraseToAnyPublisher(),
@@ -916,7 +942,6 @@ final class QuoteCreateViewModel: ObservableObject {
             $weaveEff.map { _ in () }.eraseToAnyPublisher(),
             $weaveDayOutput.map { _ in () }.eraseToAnyPublisher(),
             $weaveDayCost.map { _ in () }.eraseToAnyPublisher(),
-            $weaveDaySaleCost.map { _ in () }.eraseToAnyPublisher(),
             $sizingPrice.map { _ in () }.eraseToAnyPublisher(),
             $sandingPrice.map { _ in () }.eraseToAnyPublisher(),
             $materialRows.map { _ in () }.eraseToAnyPublisher()
@@ -931,6 +956,13 @@ final class QuoteCreateViewModel: ObservableObject {
     }
 
     private func recalculateDerivedPricing() {
+        let materialCost = calculatedMaterialCost()
+        if let dayLaborCost = computedDailyLaborCost(materialCost: materialCost) {
+            weaveDaySaleCost = fmt(dayLaborCost)
+        } else {
+            weaveDaySaleCost = ""
+        }
+
         if let laborUnitCost = computedStandardLaborCost() {
             stdWeavePrice = fmt(laborUnitCost)
         } else {
@@ -944,7 +976,6 @@ final class QuoteCreateViewModel: ObservableObject {
         }
 
         let hasMaterialInputs = materialRows.contains { !isEmptyMaterialRow($0) }
-        let materialCost = calculatedMaterialCost()
         if hasMaterialInputs && materialCost == nil {
             materialCostDisplay = ""
             costPrice = ""
@@ -956,8 +987,8 @@ final class QuoteCreateViewModel: ObservableObject {
 
         let sizingCost = dbl(sizingPrice) ?? 0
         let sandingCost = dbl(sandingPrice) ?? 0
-        let standardLaborCost = dbl(stdWeavePrice) ?? 0
-        let totalCost = (materialCost ?? 0) + sizingCost + sandingCost + standardLaborCost
+        let weaveUnitCost = dbl(weavePrice) ?? 0
+        let totalCost = (materialCost ?? 0) + sizingCost + sandingCost + weaveUnitCost
         costPrice = totalCost > 0 ? fmt(totalCost) : ""
 
         if let quote = dbl(quotePrice), quote > 0, totalCost > 0 {
@@ -975,6 +1006,20 @@ final class QuoteCreateViewModel: ObservableObject {
         }
 
         return dayCost / dayOutput
+    }
+
+    private func computedDailyLaborCost(materialCost: Double?) -> Double? {
+        guard let quote = dbl(quotePrice),
+              let dayOutput = dbl(weaveDayOutput),
+              dayOutput > 0,
+              let materialCost else {
+            return nil
+        }
+
+        let sizingCost = dbl(sizingPrice) ?? 0
+        let sandingCost = dbl(sandingPrice) ?? 0
+        let actualMargin = quote - materialCost - sizingCost - sandingCost
+        return actualMargin * dayOutput
     }
 
     private func computedWeaveUnitCost() -> Double? {
@@ -998,8 +1043,8 @@ final class QuoteCreateViewModel: ObservableObject {
         var alertMessage = ""
         let success = Calculator.calculate(
             boxNumber: reedId,
-            threading: fastenerRange,
-            fabricWidth: width,
+            threading: resolvedCalculationThreading(),
+            fabricWidth: fastenerRange,
             edgeFinishing: sideLength.isEmpty ? "0" : sideLength,
             fabricShrinkage: String(format: "%.4f", warpShrinkageFactor),
             weftDensity: weftDensity,
@@ -1098,9 +1143,6 @@ final class QuoteCreateViewModel: ObservableObject {
         if let unitPrice = dbl(row.unitPrice), unitPrice > 0 {
             return fmt(unitPrice)
         }
-        if let processPrice = dbl(row.yarnPrice), processPrice > 0 {
-            return fmt(processPrice)
-        }
         return "0"
     }
 
@@ -1130,6 +1172,16 @@ final class QuoteCreateViewModel: ObservableObject {
         }
 
         return Double(String(cleaned[matchedRange]))
+    }
+
+    private func resolvedCalculationThreading() -> String {
+        guard let reedType,
+              let numeric = extractedNumericValue(from: reedType),
+              numeric > 0 else {
+            return ""
+        }
+
+        return fmt(numeric)
     }
 
     private func ensureDirectionalRatios(on materials: inout [Material]) {
@@ -1210,9 +1262,13 @@ final class QuoteCreateViewModel: ObservableObject {
 
     private func applyInitialFormValuesIfNeeded() {
         guard !didApplyInitialFormValues else { return }
-        guard case .edit(let detail) = mode else {
+        let detail: QuoteDetail
+        switch mode {
+        case .create:
             didApplyInitialFormValues = true
             return
+        case .edit(let existingDetail), .reference(let existingDetail):
+            detail = existingDetail
         }
 
         customerName = detail.customerName ?? ""
@@ -1452,6 +1508,7 @@ final class QuoteCreateViewModel: ObservableObject {
         warpWastagePercent = m.warpWastagePercent.map { fmt($0) } ?? ""
         reedId = m.reedId.map { fmt($0) } ?? ""
         fastenerRange = m.fastenerRange.map { fmt($0) } ?? ""
+        reedType = m.reedType
         sideLength = m.sideLength.map { fmt($0) } ?? ""
 
         weaveSpeed = m.weaveSpeed.map { fmt($0) } ?? ""
