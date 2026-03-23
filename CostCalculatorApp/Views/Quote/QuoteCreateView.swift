@@ -93,6 +93,14 @@ enum QuoteFormMode {
     }
 }
 
+/// 报价单表单主分区（分段切换，避免单页过长滚动）
+enum QuoteCreateMainTab: String, CaseIterable {
+    case basics = "基本"
+    case yarn = "原料"
+    case pricing = "核价"
+    case more = "参数"
+}
+
 // MARK: - Main View
 
 struct QuoteCreateView: View {
@@ -163,21 +171,40 @@ struct QuoteCreateView: View {
     // MARK: - Form
 
     private var formContent: some View {
-        Form {
-            basicInfoSection
-            materialSection
-            materialsDetailSection
-            pricingSection
-            specsSection
-            productionSection
-            finishDetailSection
+        VStack(spacing: 0) {
+            Picker("表单分区", selection: $vm.selectedMainTab) {
+                ForEach(QuoteCreateMainTab.allCases, id: \.self) { tab in
+                    Text(tab.rawValue).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+            .background(Color(UIColor.systemGroupedBackground))
+
+            Form {
+                switch vm.selectedMainTab {
+                case .basics:
+                    basicInfoSection
+                    materialSection
+                case .yarn:
+                    materialsDetailSection
+                case .pricing:
+                    pricingSection
+                case .more:
+                    specsSection
+                    productionSection
+                    finishDetailSection
+                }
+            }
+            .listSectionSpacing(10)
         }
     }
 
     // MARK: - Basic Info
 
     private var basicInfoSection: some View {
-        Section("基本信息") {
+        Section {
             pickerRow("客户", value: vm.customerName.isEmpty ? nil : vm.customerName, required: true) {
                 vm.activeSheet = .customer
             }
@@ -188,15 +215,43 @@ struct QuoteCreateView: View {
                 vm.activeSheet = .salesperson
             }
 
-            Picker("订单类型", selection: $vm.orderType) {
-                Text("散单").tag("散单")
-                Text("样单").tag("样单")
-                Text("翻单").tag("翻单")
-            }
-            .pickerStyle(.menu)
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("订单类型")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Picker("订单类型", selection: $vm.orderType) {
+                        Text("散单").tag("散单")
+                        Text("样单").tag("样单")
+                        Text("翻单").tag("翻单")
+                    }
+                    .pickerStyle(.menu)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            pickerRow("结算方式", value: vm.selectedBalanceType?.name) {
-                vm.activeSheet = .balanceType
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("结算方式")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Button {
+                        vm.activeSheet = .balanceType
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(vm.selectedBalanceType?.name ?? "请选择")
+                                .font(.body)
+                                .foregroundColor(vm.selectedBalanceType == nil ? .secondary : .primary)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             if !vm.sourceTypes.isEmpty {
@@ -209,9 +264,35 @@ struct QuoteCreateView: View {
                 .pickerStyle(.menu)
             }
 
-            DatePicker("交期", selection: $vm.deliveryDate, displayedComponents: .date)
-            numField("订单数量", text: $vm.orderQty)
-            TextField("备注", text: $vm.remark)
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("交期")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    DatePicker("", selection: $vm.deliveryDate, displayedComponents: .date)
+                        .labelsHidden()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("订单数量")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    TextField("0", text: $vm.orderQty)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(Color(UIColor.tertiarySystemFill))
+                        .cornerRadius(8)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            TextField("备注", text: $vm.remark, axis: .vertical)
+                .lineLimit(2...4)
+        } header: {
+            Text("基本信息")
         }
     }
 
@@ -308,9 +389,7 @@ struct QuoteCreateView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .padding(.vertical, 6)
-
-            Divider()
+            .padding(.vertical, 4)
 
             // Price fields - always visible, prominent
             HStack(spacing: 12) {
@@ -369,7 +448,7 @@ struct QuoteCreateView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
     }
 
     private func priceField(_ label: String, text: Binding<String>, color: Color) -> some View {
@@ -413,8 +492,8 @@ struct QuoteCreateView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
             .background(Color(UIColor.secondarySystemFill))
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
@@ -442,8 +521,8 @@ struct QuoteCreateView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
             .background(AppTheme.Colors.primary.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
@@ -462,16 +541,45 @@ struct QuoteCreateView: View {
     // MARK: - Pricing (moved up, right after materials)
 
     private var pricingSection: some View {
-        Section("价格信息") {
+        Section {
             numField("报价单价", text: $vm.quotePrice)
             infoRow("原料成本", vm.materialCostDisplay.isEmpty ? "自动计算" : vm.materialCostDisplay)
             infoRow("成本单价", vm.costPrice.isEmpty ? "自动计算" : vm.costPrice)
             infoRow("利润率%", vm.profitRate.isEmpty ? "自动计算" : vm.profitRate)
-            numField("浆纱单价", text: $vm.sizingPrice)
-            numField("磨毛单价", text: $vm.sandingPrice)
+            infoRow("日工费", vm.weaveDaySaleCost.isEmpty ? "自动计算" : vm.weaveDaySaleCost)
+
+            HStack(alignment: .top, spacing: 8) {
+                compactPricingField("浆纱单价", text: $vm.sizingPrice)
+                compactPricingField("磨毛单价", text: $vm.sandingPrice)
+                compactPricingField("小样费用", text: $vm.sampleCost)
+            }
+
             infoRow("标准工费", vm.stdWeavePrice.isEmpty ? "自动计算" : vm.stdWeavePrice)
-            numField("小样费用", text: $vm.sampleCost)
+        } header: {
+            Text("价格信息")
+        } footer: {
+            Text("浆纱、磨毛、小样为同一行录入，便于对照。")
+                .font(.caption2)
         }
+    }
+
+    private func compactPricingField(_ label: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+            TextField("0", text: text)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .font(.subheadline)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 6)
+                .background(Color(UIColor.tertiarySystemFill))
+                .cornerRadius(6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Specs (collapsible)
@@ -482,7 +590,6 @@ struct QuoteCreateView: View {
             isExpanded: $vm.isSpecsExpanded,
             badge: vm.specsFilledCount
         ) {
-            numField("成品门幅(存档)", text: $vm.width)
             numField("筘号", text: $vm.reedId)
             numField("筘幅", text: $vm.fastenerRange)
             infoRow("筘入", vm.reedTypeDisplay)
@@ -491,9 +598,6 @@ struct QuoteCreateView: View {
             numField("总经根数", text: $vm.beamTotalEnd)
             numField("经密", text: $vm.warpDensity)
             numField("纬密", text: $vm.weftDensity)
-            Text("成本计算只使用筘号、筘入、筘幅；成品门幅仅随报价单保存，不参与成本计算。")
-                .font(.caption)
-                .foregroundColor(.secondary)
         }
     }
 
@@ -585,8 +689,7 @@ struct QuoteCreateView: View {
                 subtitle: {
                     [
                         $0.component,
-                        $0.fastenerRange.map { "筘幅\($0)" },
-                        $0.width.map { "成品门幅\($0)" }
+                        $0.fastenerRange.map { "筘幅\($0)" }
                     ]
                     .compactMap { $0 }
                     .joined(separator: " · ")
@@ -805,6 +908,7 @@ final class QuoteCreateViewModel: ObservableObject {
     @Published var isLoadingBOM = false
 
     // Section expansion states
+    @Published var selectedMainTab: QuoteCreateMainTab = .basics
     @Published var isSpecsExpanded = false
     @Published var isProductionExpanded = false
     @Published var isFinishExpanded = false

@@ -409,7 +409,7 @@ struct QuoteOverviewCard: View {
             GridItem(.flexible())
         ], spacing: AppTheme.Spacing.small) {
             MetricItem(label: "订单数量", value: formatNumber(quote.orderQty), icon: "shippingbox")
-            MetricItem(label: "成品门幅(存档)", value: formatDecimal(quote.width), icon: "ruler")
+            MetricItem(label: "筘幅", value: formatDecimal(quote.fastenerRange), icon: "ruler")
             MetricItem(label: "纬密", value: formatDecimal(quote.weftDensity), icon: "lines.measurement.horizontal")
             MetricItem(label: "总经根数", value: formatInt(quote.beamTotalEnd), icon: "number")
             MetricItem(label: "成本价", value: formatPrice(quote.costPrice), icon: "sum")

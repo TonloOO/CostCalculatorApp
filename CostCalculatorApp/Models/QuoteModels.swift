@@ -78,6 +78,7 @@ struct QuoteOverview: Codable, Identifiable {
     let status: String?
     let costPrice: Double?
     let profitRate: Double?
+    let fastenerRange: Double?
     let materials: [QuoteMaterial]?
     
     var id: String { quoteNo }
