@@ -450,24 +450,22 @@ struct QuoteOverviewCard: View {
                                         .fontWeight(.medium)
                                         .foregroundColor(AppTheme.Colors.primaryText)
 
-                                    HStack(spacing: 8) {
-                                        if let provider = material.providerName, !provider.isEmpty {
-                                            Text(provider)
-                                                .font(AppTheme.Typography.caption2)
-                                                .foregroundColor(AppTheme.Colors.tertiaryText)
-                                        }
-
-                                        if let yarnUseQty = material.yarnUseQty {
-                                            Text(String(format: "用纱量 %.2f", yarnUseQty))
-                                                .font(AppTheme.Typography.caption2)
-                                                .foregroundColor(AppTheme.Colors.secondaryText)
-                                        }
+                                    if let provider = material.providerName, !provider.isEmpty {
+                                        Text(provider)
+                                            .font(AppTheme.Typography.caption2)
+                                            .foregroundColor(AppTheme.Colors.tertiaryText)
                                     }
                                 }
 
                                 Spacer()
 
                                 VStack(alignment: .trailing, spacing: 3) {
+                                    if let yarnUseQty = material.yarnUseQty {
+                                        Text(String(format: "用纱量 %.2f", yarnUseQty))
+                                            .font(AppTheme.Typography.caption2)
+                                            .foregroundColor(AppTheme.Colors.secondaryText)
+                                    }
+
                                     if let price = material.unitPrice {
                                         Text(String(format: "原料单价 ¥%.2f", price))
                                             .font(AppTheme.Typography.caption2)

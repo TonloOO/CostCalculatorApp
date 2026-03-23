@@ -383,6 +383,8 @@ struct QuoteCreateMaterialRow: Codable {
     var providerName: String?
     var yarnCount: String?
     var remark: String?
+    var yarnUseQty: Double?
+    var dtlYarnCost: Double?
 }
 
 struct QuoteCreateFinishRow: Codable {

@@ -501,8 +501,9 @@ private struct DetailGrid<Content: View>: View {
     var body: some View {
         LazyVGrid(columns: [
             GridItem(.flexible()),
+            GridItem(.flexible()),
             GridItem(.flexible())
-        ], alignment: .leading, spacing: 8) {
+        ], alignment: .leading, spacing: 10) {
             content
         }
     }

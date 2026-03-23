@@ -320,6 +320,26 @@ struct QuoteCreateView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
+            if let cost = vm.perRowCostMap[row.wrappedValue.id] {
+                HStack(spacing: 4) {
+                    Image(systemName: "function")
+                        .font(.caption2)
+                    Text("原料成本")
+                        .font(.caption)
+                    Spacer()
+                    Text(String(format: "¥%.4f /米", cost))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                }
+                .foregroundColor(AppTheme.Colors.primary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(AppTheme.Colors.primary.opacity(0.08))
+                )
+            }
+
             HStack(alignment: .top, spacing: 12) {
                 supplierActionCard(row: row)
                     .layoutPriority(1)
@@ -826,6 +846,7 @@ final class QuoteCreateViewModel: ObservableObject {
     @Published var materialCostDisplay = ""
     @Published var costPrice = ""
     @Published var remark = ""
+    @Published var perRowCostMap: [UUID: Double] = [:]
 
     @Published var materialNo = ""
     @Published var materialName = ""
@@ -956,7 +977,11 @@ final class QuoteCreateViewModel: ObservableObject {
     }
 
     private func recalculateDerivedPricing() {
-        let materialCost = calculatedMaterialCost()
+        let calcResults = runMaterialCalculation()
+        let materialCost = calcResults.map { $0.warpCost + $0.weftCost }
+
+        updatePerRowCosts(from: calcResults)
+
         if let dayLaborCost = computedDailyLaborCost(materialCost: materialCost) {
             weaveDaySaleCost = fmt(dayLaborCost)
         } else {
@@ -998,6 +1023,20 @@ final class QuoteCreateViewModel: ObservableObject {
         }
     }
 
+    private func updatePerRowCosts(from calcResults: CalculationResults?) {
+        var newMap: [UUID: Double] = [:]
+        if let results = calcResults {
+            let nonEmptyRows = materialRows.filter { !isEmptyMaterialRow($0) }
+            for (idx, perResult) in results.perMaterialResults.enumerated() {
+                guard idx < nonEmptyRows.count else { break }
+                let row = nonEmptyRows[idx]
+                let isWarp = normalizedUsage(row.usage) == "经纱"
+                newMap[row.id] = isWarp ? perResult.warpCost : perResult.weftCost
+            }
+        }
+        perRowCostMap = newMap
+    }
+
     private func computedStandardLaborCost() -> Double? {
         guard let dayCost = dbl(weaveDaySaleCost),
               let dayOutput = dbl(weaveDayOutput),
@@ -1032,14 +1071,14 @@ final class QuoteCreateViewModel: ObservableObject {
         return dayMachineCost / dayOutput
     }
 
-    private func calculatedMaterialCost() -> Double? {
+    private func runMaterialCalculation() -> CalculationResults? {
         let materials = buildCalculationMaterials()
         guard !materials.isEmpty else { return nil }
 
         let warpWastage = dbl(warpWastagePercent) ?? 0
         let warpShrinkageFactor = warpWastage < 100 ? 100.0 / (100.0 - warpWastage) : 1.0
 
-        let calculationResults = CalculationResults()
+        let results = CalculationResults()
         var alertMessage = ""
         let success = Calculator.calculate(
             boxNumber: reedId,
@@ -1054,13 +1093,34 @@ final class QuoteCreateViewModel: ObservableObject {
             fixedCost: "0",
             materials: materials,
             constants: calculationConstants,
-            calculationResults: calculationResults,
+            calculationResults: results,
             warpEndsOverride: beamTotalEnd,
             alertMessage: &alertMessage
         )
 
-        guard success else { return nil }
-        return calculationResults.warpCost + calculationResults.weftCost
+        return success ? results : nil
+    }
+
+    private func calculatedMaterialCost() -> Double? {
+        guard let results = runMaterialCalculation() else { return nil }
+        return results.warpCost + results.weftCost
+    }
+
+    private func computePerRowMaterialCosts() -> [UUID: (yarnUseQty: Double, dtlYarnCost: Double)] {
+        var costMap: [UUID: (yarnUseQty: Double, dtlYarnCost: Double)] = [:]
+        guard let results = runMaterialCalculation() else { return costMap }
+
+        let nonEmptyRows = materialRows.filter { !isEmptyMaterialRow($0) }
+        for (idx, perResult) in results.perMaterialResults.enumerated() {
+            guard idx < nonEmptyRows.count else { break }
+            let row = nonEmptyRows[idx]
+            let isWarp = normalizedUsage(row.usage) == "经纱"
+            costMap[row.id] = (
+                yarnUseQty: isWarp ? perResult.warpWeight : perResult.weftWeight,
+                dtlYarnCost: isWarp ? perResult.warpCost : perResult.weftCost
+            )
+        }
+        return costMap
     }
 
     private func buildCalculationMaterials() -> [Material] {
@@ -1560,6 +1620,8 @@ final class QuoteCreateViewModel: ObservableObject {
         let dateFmt = DateFormatter()
         dateFmt.dateFormat = "yyyy-MM-dd"
 
+        let perRowCosts = computePerRowMaterialCosts()
+
         let request = QuoteCreateRequest(
             customerName: customerName,
             customerGuid: customerGuid,
@@ -1605,7 +1667,8 @@ final class QuoteCreateViewModel: ObservableObject {
             remark: remark.isEmpty ? nil : remark,
             creator: creator,
             materials: materialRows.map { row in
-                QuoteCreateMaterialRow(
+                let costs = perRowCosts[row.id]
+                return QuoteCreateMaterialRow(
                     materialNo: row.materialNo.isEmpty ? nil : row.materialNo,
                     materialName: row.materialName.isEmpty ? nil : row.materialName,
                     usage: row.usage,
@@ -1617,7 +1680,9 @@ final class QuoteCreateViewModel: ObservableObject {
                     providerNo: row.providerNo.isEmpty ? nil : row.providerNo,
                     providerName: row.providerName.isEmpty ? nil : row.providerName,
                     yarnCount: row.yarnCount.isEmpty ? nil : row.yarnCount,
-                    remark: row.remark.isEmpty ? nil : row.remark
+                    remark: row.remark.isEmpty ? nil : row.remark,
+                    yarnUseQty: costs?.yarnUseQty,
+                    dtlYarnCost: costs?.dtlYarnCost
                 )
             },
             finishDetails: finishRows.compactMap { row in
