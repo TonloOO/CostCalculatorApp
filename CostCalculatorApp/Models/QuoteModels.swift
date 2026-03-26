@@ -495,10 +495,90 @@ struct WeavePatternResponse: Codable {
     let meta: WeaveMeta?
 }
 
+struct WeaveRepeatGroup: Codable, Hashable {
+    let startRow: Int
+    let endRow: Int
+    let `repeat`: Int
+}
+
+struct WeaveColorAssignment: Codable, Hashable {
+    let groupIndex: Int
+    let color: String
+}
+
+struct DisplayWeaveRow: Hashable {
+    let sourceRowIndex: Int
+    let displayRowNumber: Int
+    let cells: [Int]
+}
+
 struct WeaveGrid: Codable {
     let width: Int
     let height: Int
     let grid: [[Int]]
+    let repeatGroups: [WeaveRepeatGroup]
+    let colorAssignments: [WeaveColorAssignment]
+
+    enum CodingKeys: String, CodingKey {
+        case width
+        case height
+        case grid
+        case repeatGroups
+        case colorAssignments
+    }
+
+    init(
+        width: Int,
+        height: Int,
+        grid: [[Int]],
+        repeatGroups: [WeaveRepeatGroup] = [],
+        colorAssignments: [WeaveColorAssignment] = []
+    ) {
+        self.width = width
+        self.height = height
+        self.grid = grid
+        self.repeatGroups = repeatGroups
+        self.colorAssignments = colorAssignments
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        width = try container.decode(Int.self, forKey: .width)
+        height = try container.decode(Int.self, forKey: .height)
+        grid = try container.decode([[Int]].self, forKey: .grid)
+        repeatGroups = try container.decodeIfPresent([WeaveRepeatGroup].self, forKey: .repeatGroups) ?? []
+        colorAssignments = try container.decodeIfPresent([WeaveColorAssignment].self, forKey: .colorAssignments) ?? []
+    }
+
+    var displayRows: [DisplayWeaveRow] {
+        (0..<height).reversed().map { sourceRowIndex in
+            let cells = sourceRowIndex < grid.count ? grid[sourceRowIndex] : []
+            return DisplayWeaveRow(
+                sourceRowIndex: sourceRowIndex,
+                displayRowNumber: sourceRowIndex + 1,
+                cells: cells
+            )
+        }
+    }
+
+    var displayColumns: [Int] {
+        width > 0 ? Array(1...width) : []
+    }
+
+    func repeatGroup(for sourceRowIndex: Int) -> WeaveRepeatGroup? {
+        repeatGroups.first { group in
+            group.startRow ... group.endRow ~= sourceRowIndex
+        }
+    }
+
+    func colorAssignment(for sourceRowIndex: Int) -> WeaveColorAssignment? {
+        guard let group = repeatGroup(for: sourceRowIndex),
+              let groupIndex = repeatGroups.firstIndex(of: group) else {
+            return nil
+        }
+
+        return colorAssignments.first { $0.groupIndex == groupIndex }
+    }
 }
 
 struct WeaveMeta: Codable {

@@ -52,16 +52,20 @@ struct WeavePatternView: View {
 
                 if let ws = p.weaveStructure {
                     gridCard(title: "成品组织图", grid: ws)
+                    gridRulesCard(title: "成品组织图", grid: ws)
 
                     if let gs = p.groundStructure, gs.grid != ws.grid {
                         gridCard(title: "地组织图", grid: gs)
+                        gridRulesCard(title: "地组织图", grid: gs)
                     }
                 } else if let gs = p.groundStructure {
                     gridCard(title: "成品组织图", grid: gs)
+                    gridRulesCard(title: "成品组织图", grid: gs)
                 }
 
                 if let bs = p.backStructure {
                     gridCard(title: "反面组织图", grid: bs)
+                    gridRulesCard(title: "反面组织图", grid: bs)
                 }
 
                 processParamsCard(p)
@@ -140,11 +144,21 @@ struct WeavePatternView: View {
 
         return ScrollView(.horizontal, showsIndicators: false) {
             VStack(spacing: spacing) {
-                ForEach(0..<grid.height, id: \.self) { row in
+                HStack(spacing: spacing) {
+                    axisCell(text: "行\\列", width: max(32, cellSize), height: max(24, cellSize * 0.8))
+
+                    ForEach(grid.displayColumns, id: \.self) { column in
+                        axisCell(text: "\(column)", width: cellSize, height: max(24, cellSize * 0.8))
+                    }
+                }
+
+                ForEach(grid.displayRows, id: \.displayRowNumber) { row in
                     HStack(spacing: spacing) {
+                        axisCell(text: "\(row.displayRowNumber)", width: max(32, cellSize), height: cellSize)
+
                         ForEach(0..<grid.width, id: \.self) { col in
-                            let filled = (row < grid.grid.count && col < grid.grid[row].count)
-                                ? grid.grid[row][col] == 1
+                            let filled = col < row.cells.count
+                                ? row.cells[col] == 1
                                 : false
 
                             RoundedRectangle(cornerRadius: 2)
@@ -169,6 +183,21 @@ struct WeavePatternView: View {
             .background(AppTheme.Colors.groupedBackground)
             .cornerRadius(AppTheme.CornerRadius.small)
         }
+    }
+
+    private func axisCell(text: String, width: CGFloat, height: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: 4)
+            .fill(AppTheme.Colors.secondaryBackground)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(AppTheme.Colors.tertiaryText.opacity(0.25), lineWidth: 0.5)
+            )
+            .overlay(
+                Text(text)
+                    .font(AppTheme.Typography.caption2.weight(.semibold))
+                    .foregroundColor(AppTheme.Colors.secondaryText)
+            )
+            .frame(width: width, height: height)
     }
 
     // MARK: - Process Params
@@ -196,6 +225,40 @@ struct WeavePatternView: View {
 
                 ForEach(visible, id: \.0) { label, value in
                     paramRow(label, value ?? "-")
+                }
+            }
+            .padding(AppTheme.Spacing.medium)
+            .background(AppTheme.Colors.background)
+            .cornerRadius(AppTheme.CornerRadius.medium)
+            .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
+        )
+    }
+
+    private func gridRulesCard(title: String, grid: WeaveGrid) -> some View {
+        let repeatSummary = repeatSummaryLines(for: grid)
+        let colorSummary = colorSummaryLines(for: grid)
+
+        guard !repeatSummary.isEmpty || !colorSummary.isEmpty else {
+            return AnyView(EmptyView())
+        }
+
+        return AnyView(
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(AppTheme.Colors.warning)
+                        .frame(width: 8, height: 8)
+                    Text("\(title)规则")
+                        .font(AppTheme.Typography.headline)
+                        .foregroundColor(AppTheme.Colors.primaryText)
+                }
+
+                ForEach(repeatSummary, id: \.self) { summary in
+                    paramRow("纬向重复", summary)
+                }
+
+                ForEach(colorSummary, id: \.self) { summary in
+                    paramRow("纱线分配", summary)
                 }
             }
             .padding(AppTheme.Spacing.medium)
@@ -262,6 +325,23 @@ struct WeavePatternView: View {
     }
 
     // MARK: - Helpers
+
+    private func repeatSummaryLines(for grid: WeaveGrid) -> [String] {
+        grid.repeatGroups.map { group in
+            "第\(group.startRow + 1)-\(group.endRow + 1)行，重复 \(group.repeat) 次"
+        }
+    }
+
+    private func colorSummaryLines(for grid: WeaveGrid) -> [String] {
+        grid.colorAssignments.compactMap { assignment in
+            guard assignment.groupIndex < grid.repeatGroups.count else {
+                return nil
+            }
+
+            let group = grid.repeatGroups[assignment.groupIndex]
+            return "第\(group.startRow + 1)-\(group.endRow + 1)行使用 \(assignment.color) 纱"
+        }
+    }
 
     private func paramRow(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
