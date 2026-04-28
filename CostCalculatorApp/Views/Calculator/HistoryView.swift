@@ -211,40 +211,34 @@ struct HistoryView: View {
     
     @ViewBuilder
     private var customDateRow: some View {
-        HStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Text("从")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
-                DatePicker("", selection: customStartDate, displayedComponents: .date)
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
-                    .environment(\.locale, Locale(identifier: "zh_CN"))
-                    .fixedSize()
-            }
-            
-            Spacer()
-            
+        HStack(spacing: 12) {
+            customDateField(title: "从", selection: customStartDate)
+
             Rectangle()
                 .fill(AppTheme.Colors.tertiaryText.opacity(0.3))
                 .frame(width: 16, height: 1)
-            
-            Spacer()
-            
-            HStack(spacing: 6) {
-                Text("至")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
-                DatePicker("", selection: customEndDate, displayedComponents: .date)
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
-                    .environment(\.locale, Locale(identifier: "zh_CN"))
-                    .fixedSize()
-            }
-            
+
+            customDateField(title: "至", selection: customEndDate)
         }
         .padding(.horizontal, AppTheme.Spacing.medium)
         .padding(.bottom, 10)
+    }
+
+    @ViewBuilder
+    private func customDateField(title: String, selection: Binding<Date>) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(AppTheme.Colors.tertiaryText)
+                .frame(width: 12, alignment: .leading)
+
+            DatePicker("", selection: selection, displayedComponents: .date)
+                .datePickerStyle(.compact)
+                .labelsHidden()
+                .environment(\.locale, Locale(identifier: "zh_CN"))
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func deleteRecord(_ record: CalculationRecord) {

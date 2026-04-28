@@ -88,4 +88,44 @@ struct CostCalculatorAppTests {
         #expect(grid.displayRows.last?.cells == [1, 2, 3, 4])
     }
 
+    @Test func weaveGridCompactERPLayoutUsesBaseRowsAndExtraGuideColumns() {
+        let grid = WeaveGrid(
+            width: 2,
+            height: 8,
+            grid: [
+                [1, 0],
+                [0, 1],
+                [1, 1],
+                [0, 0],
+                [1, 0],
+                [0, 1],
+                [1, 1],
+                [0, 0]
+            ],
+            repeatGroups: [
+                WeaveRepeatGroup(startRow: 0, endRow: 1, repeat: 2),
+                WeaveRepeatGroup(startRow: 2, endRow: 3, repeat: 4),
+                WeaveRepeatGroup(startRow: 4, endRow: 5, repeat: 2),
+                WeaveRepeatGroup(startRow: 6, endRow: 7, repeat: 4)
+            ],
+            colorAssignments: [
+                WeaveColorAssignment(groupIndex: 0, color: "B"),
+                WeaveColorAssignment(groupIndex: 1, color: "A"),
+                WeaveColorAssignment(groupIndex: 2, color: "B"),
+                WeaveColorAssignment(groupIndex: 3, color: "A")
+            ]
+        )
+
+        let compact = grid.compactERPLayout
+
+        #expect(compact?.width == 4)
+        #expect(compact?.height == 4)
+        #expect(compact?.grid[0] == [1, 0, 0, 0])
+        #expect(compact?.grid[3] == [0, 0, 0, 0])
+        #expect(compact?.sections.count == 2)
+        #expect(compact?.sections.first?.repeat == 2)
+        #expect(compact?.sections.last?.repeat == 4)
+        #expect(compact?.sections.last?.cumulativeEndsAt == 12)
+    }
+
 }

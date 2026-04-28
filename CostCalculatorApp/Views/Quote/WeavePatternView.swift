@@ -112,7 +112,9 @@ struct WeavePatternView: View {
     // MARK: - Grid Card
 
     private func gridCard(title: String, grid: WeaveGrid) -> some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
+        let layout = grid.compactERPLayout
+
+        return VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
             HStack(spacing: 6) {
                 Circle()
                     .fill(AppTheme.Colors.primary)
@@ -121,7 +123,7 @@ struct WeavePatternView: View {
                     .font(AppTheme.Typography.headline)
                     .foregroundColor(AppTheme.Colors.primaryText)
                 Spacer()
-                Text("\(grid.width) × \(grid.height)")
+                Text("\(layout?.width ?? grid.width) × \(layout?.height ?? grid.height)")
                     .font(AppTheme.Typography.caption1)
                     .foregroundColor(AppTheme.Colors.tertiaryText)
                     .padding(.horizontal, 8)
@@ -139,49 +141,85 @@ struct WeavePatternView: View {
     }
 
     private func weaveGridView(_ grid: WeaveGrid) -> some View {
-        let cellSize: CGFloat = min(28, (UIScreen.main.bounds.width - 80) / CGFloat(grid.width))
+        let layout = grid.compactERPLayout
+        let renderedGrid = layout?.grid ?? grid.grid
+        let renderedWidth = layout?.width ?? grid.width
+        let renderedRows = displayRows(for: renderedGrid)
+        let cellSize: CGFloat = 18
+        let axisWidth: CGFloat = 22
+        let legendWidth: CGFloat = 56
+        let headerHeight: CGFloat = 20
         let spacing: CGFloat = 1.5
 
-        return ScrollView(.horizontal, showsIndicators: false) {
-            VStack(spacing: spacing) {
-                HStack(spacing: spacing) {
-                    axisCell(text: "行\\列", width: max(32, cellSize), height: max(24, cellSize * 0.8))
-
-                    ForEach(grid.displayColumns, id: \.self) { column in
-                        axisCell(text: "\(column)", width: cellSize, height: max(24, cellSize * 0.8))
-                    }
-                }
-
-                ForEach(grid.displayRows, id: \.displayRowNumber) { row in
+        return ScrollView(.horizontal, showsIndicators: true) {
+            HStack(alignment: .top, spacing: AppTheme.Spacing.small) {
+                VStack(spacing: spacing) {
                     HStack(spacing: spacing) {
-                        axisCell(text: "\(row.displayRowNumber)", width: max(32, cellSize), height: cellSize)
+                        axisCell(text: "行列", width: axisWidth, height: headerHeight)
 
-                        ForEach(0..<grid.width, id: \.self) { col in
-                            let filled = col < row.cells.count
-                                ? row.cells[col] == 1
-                                : false
+                        ForEach(1...renderedWidth, id: \.self) { column in
+                            axisCell(text: "\(column)", width: cellSize, height: headerHeight)
+                        }
+                    }
 
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(filled
-                                      ? AppTheme.Colors.primary
-                                      : AppTheme.Colors.secondaryBackground)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .stroke(
-                                            filled
-                                                ? AppTheme.Colors.primary.opacity(0.8)
-                                                : AppTheme.Colors.tertiaryText.opacity(0.3),
-                                            lineWidth: 0.5
-                                        )
-                                )
-                                .frame(width: cellSize, height: cellSize)
+                    ForEach(renderedRows, id: \.displayRowNumber) { row in
+                        HStack(spacing: spacing) {
+                            axisCell(text: "\(row.displayRowNumber)", width: axisWidth, height: cellSize)
+
+                            ForEach(0..<renderedWidth, id: \.self) { col in
+                                let filled = col < row.cells.count
+                                    ? row.cells[col] == 1
+                                    : false
+
+                                RoundedRectangle(cornerRadius: 1.5)
+                                    .fill(filled
+                                          ? AppTheme.Colors.primary.opacity(0.38)
+                                          : AppTheme.Colors.background)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 1.5)
+                                            .stroke(AppTheme.Colors.tertiaryText.opacity(0.45), lineWidth: 0.45)
+                                    )
+                                    .overlay(
+                                        Group {
+                                            if filled && col < grid.width {
+                                                Text("\(col + 1)")
+                                                    .font(.system(size: max(8, cellSize * 0.55), weight: .medium))
+                                                    .foregroundColor(AppTheme.Colors.primaryText)
+                                            }
+                                        }
+                                    )
+                                    .frame(width: cellSize, height: cellSize)
+                            }
                         }
                     }
                 }
+                .padding(AppTheme.Spacing.xSmall)
+                .background(AppTheme.Colors.groupedBackground)
+                .cornerRadius(AppTheme.CornerRadius.small)
+
+                if let layout, !layout.sections.isEmpty {
+                    compactLegendView(
+                        layout: layout,
+                        cellSize: cellSize,
+                        headerHeight: headerHeight,
+                        spacing: spacing
+                    )
+                    .padding(.vertical, AppTheme.Spacing.xSmall)
+                    .frame(width: legendWidth)
+                }
             }
-            .padding(AppTheme.Spacing.small)
-            .background(AppTheme.Colors.groupedBackground)
-            .cornerRadius(AppTheme.CornerRadius.small)
+            .padding(.horizontal, AppTheme.Spacing.xxSmall)
+        }
+        .frame(height: preferredGridHeight(rowCount: renderedRows.count))
+    }
+
+    private func displayRows(for rows: [[Int]]) -> [DisplayWeaveRow] {
+        rows.enumerated().reversed().map { index, row in
+            DisplayWeaveRow(
+                sourceRowIndex: index,
+                displayRowNumber: index + 1,
+                cells: row
+            )
         }
     }
 
@@ -198,6 +236,49 @@ struct WeavePatternView: View {
                     .foregroundColor(AppTheme.Colors.secondaryText)
             )
             .frame(width: width, height: height)
+    }
+
+    private func compactLegendView(
+        layout: CompactERPWeaveLayout,
+        cellSize: CGFloat,
+        headerHeight: CGFloat,
+        spacing: CGFloat
+    ) -> some View {
+        VStack(spacing: spacing) {
+            Color.clear
+                .frame(height: headerHeight)
+
+            ForEach(layout.sections.reversed(), id: \.startRow) { section in
+                let rowCount = section.endRow - section.startRow + 1
+                VStack(spacing: 4) {
+                    Text("\(section.cumulativeEndsAt)")
+                        .font(AppTheme.Typography.footnote)
+                        .foregroundColor(AppTheme.Colors.primaryText)
+
+                    Text("\(section.repeat)次")
+                        .font(AppTheme.Typography.title3)
+                        .foregroundColor(AppTheme.Colors.secondaryText)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: CGFloat(rowCount) * cellSize + CGFloat(max(rowCount - 1, 0)) * spacing)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(AppTheme.Colors.tertiaryText.opacity(0.35), lineWidth: 0.8)
+                )
+            }
+        }
+    }
+
+    private func preferredGridHeight(rowCount: Int) -> CGFloat {
+        let cellSize: CGFloat = 18
+        let headerHeight: CGFloat = 20
+        let spacing: CGFloat = 1.5
+        let gridPadding = AppTheme.Spacing.xSmall * 2
+
+        return headerHeight
+            + CGFloat(rowCount) * cellSize
+            + CGFloat(max(rowCount, 0)) * spacing
+            + gridPadding
     }
 
     // MARK: - Process Params

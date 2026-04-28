@@ -512,6 +512,20 @@ struct DisplayWeaveRow: Hashable {
     let cells: [Int]
 }
 
+struct ERPWeaveSection: Hashable {
+    let startRow: Int
+    let endRow: Int
+    let `repeat`: Int
+    let cumulativeEndsAt: Int
+}
+
+struct CompactERPWeaveLayout: Hashable {
+    let width: Int
+    let height: Int
+    let grid: [[Int]]
+    let sections: [ERPWeaveSection]
+}
+
 struct WeaveGrid: Codable {
     let width: Int
     let height: Int
@@ -578,6 +592,51 @@ struct WeaveGrid: Codable {
         }
 
         return colorAssignments.first { $0.groupIndex == groupIndex }
+    }
+
+    var compactERPLayout: CompactERPWeaveLayout? {
+        guard !repeatGroups.isEmpty else { return nil }
+
+        let visibleGroups: [WeaveRepeatGroup]
+        if repeatGroups.count.isMultiple(of: 2),
+           let splitIndex = repeatGroups.indices.dropFirst(repeatGroups.count / 2 - 1).first {
+            let visibleRowCount = repeatGroups[splitIndex].endRow + 1
+            if visibleRowCount * 2 == height {
+                visibleGroups = Array(repeatGroups.prefix(repeatGroups.count / 2))
+            } else {
+                visibleGroups = repeatGroups
+            }
+        } else {
+            visibleGroups = repeatGroups
+        }
+
+        guard let lastVisibleRow = visibleGroups.last?.endRow,
+              lastVisibleRow < grid.count else {
+            return nil
+        }
+
+        let visibleGrid = Array(grid.prefix(lastVisibleRow + 1)).map { row in
+            row + [0, 0]
+        }
+
+        var cumulativeEndsAt = 0
+        let sections = visibleGroups.map { group in
+            let rowCount = group.endRow - group.startRow + 1
+            cumulativeEndsAt += rowCount * group.repeat
+            return ERPWeaveSection(
+                startRow: group.startRow + 1,
+                endRow: group.endRow + 1,
+                repeat: group.repeat,
+                cumulativeEndsAt: cumulativeEndsAt
+            )
+        }
+
+        return CompactERPWeaveLayout(
+            width: width + 2,
+            height: visibleGrid.count,
+            grid: visibleGrid,
+            sections: sections
+        )
     }
 }
 
