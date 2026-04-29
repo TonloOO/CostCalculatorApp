@@ -9,11 +9,11 @@ struct RecognitionCardView: View {
             HStack(spacing: AppTheme.Spacing.xSmall) {
                 Image(systemName: "checkmark.seal.fill")
                     .font(.system(size: 16))
-                    .foregroundColor(AppTheme.Colors.success)
+                    .foregroundStyle(AppTheme.Colors.success)
 
                 Text("纺织品参数识别完成")
                     .font(AppTheme.Typography.headline)
-                    .foregroundColor(AppTheme.Colors.primaryText)
+                    .foregroundStyle(AppTheme.Colors.primaryText)
 
                 Spacer()
 
@@ -44,7 +44,7 @@ struct RecognitionCardView: View {
                     Divider().padding(.vertical, AppTheme.Spacing.xxSmall)
                     Text("材料信息 (\(result.materials.count)种)")
                         .font(AppTheme.Typography.caption1)
-                        .foregroundColor(AppTheme.Colors.secondaryText)
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
 
                     ForEach(Array(result.materials.enumerated()), id: \.offset) { index, material in
                         materialRow(material, index: index)
@@ -56,10 +56,10 @@ struct RecognitionCardView: View {
                     HStack(alignment: .top, spacing: 4) {
                         Image(systemName: "info.circle")
                             .font(.system(size: 11))
-                            .foregroundColor(AppTheme.Colors.info)
+                            .foregroundStyle(AppTheme.Colors.info)
                         Text(notes)
                             .font(AppTheme.Typography.caption2)
-                            .foregroundColor(AppTheme.Colors.secondaryText)
+                            .foregroundStyle(AppTheme.Colors.secondaryText)
                     }
                 }
             }
@@ -72,7 +72,7 @@ struct RecognitionCardView: View {
                     Text(result.isSingleMaterial ? "填入单材料计算器" : "填入多材料计算器")
                         .font(AppTheme.Typography.buttonText)
                 }
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, AppTheme.Spacing.small)
                 .background(AppTheme.Colors.primaryGradient)
@@ -98,7 +98,7 @@ struct RecognitionCardView: View {
 
         return Text("置信度: \(text)")
             .font(AppTheme.Typography.caption2)
-            .foregroundColor(color)
+            .foregroundStyle(color)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(color.opacity(0.12))
@@ -109,11 +109,11 @@ struct RecognitionCardView: View {
         HStack {
             Text(label)
                 .font(AppTheme.Typography.caption1)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
                 .frame(width: 50, alignment: .leading)
             Text(value)
                 .font(AppTheme.Typography.subheadline)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
         }
     }
 
@@ -122,23 +122,23 @@ struct RecognitionCardView: View {
             Text(material.name ?? "材料\(index + 1)")
                 .font(AppTheme.Typography.footnote)
                 .fontWeight(.medium)
-                .foregroundColor(AppTheme.Colors.primary)
+                .foregroundStyle(AppTheme.Colors.primary)
 
             HStack(spacing: AppTheme.Spacing.medium) {
                 if let wv = material.warpYarnValue, let wt = material.warpYarnType {
                     Label("经 \(wv) \(wt)", systemImage: "arrow.up.and.down")
                         .font(AppTheme.Typography.caption2)
-                        .foregroundColor(AppTheme.Colors.secondaryText)
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
                 }
                 if let fv = material.weftYarnValue, let ft = material.weftYarnType {
                     Label("纬 \(fv) \(ft)", systemImage: "arrow.left.and.right")
                         .font(AppTheme.Typography.caption2)
-                        .foregroundColor(AppTheme.Colors.secondaryText)
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
                 }
                 if let wp = material.warpYarnPrice {
                     Text("经价 \(wp)")
                         .font(AppTheme.Typography.caption2)
-                        .foregroundColor(AppTheme.Colors.secondaryText)
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
                 }
             }
         }

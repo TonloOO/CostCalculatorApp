@@ -5,7 +5,7 @@ struct ConversationListView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 AppTheme.Colors.groupedBackground.ignoresSafeArea()
 
@@ -13,10 +13,10 @@ struct ConversationListView: View {
                     VStack(spacing: AppTheme.Spacing.medium) {
                         Image(systemName: "bubble.left.and.text.bubble.right")
                             .font(.system(size: 48))
-                            .foregroundColor(AppTheme.Colors.tertiaryText)
+                            .foregroundStyle(AppTheme.Colors.tertiaryText)
                         Text("暂无对话记录")
                             .font(AppTheme.Typography.body)
-                            .foregroundColor(AppTheme.Colors.secondaryText)
+                            .foregroundStyle(AppTheme.Colors.secondaryText)
                     }
                 } else {
                     List {
@@ -28,7 +28,7 @@ struct ConversationListView: View {
                                 HStack(spacing: AppTheme.Spacing.small) {
                                     Image(systemName: "bubble.left")
                                         .font(.system(size: 16))
-                                        .foregroundColor(AppTheme.Colors.primary)
+                                        .foregroundStyle(AppTheme.Colors.primary)
                                         .frame(width: 32, height: 32)
                                         .background(AppTheme.Colors.primary.opacity(0.1))
                                         .clipShape(Circle())
@@ -36,19 +36,19 @@ struct ConversationListView: View {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(conversation.title)
                                             .font(AppTheme.Typography.headline)
-                                            .foregroundColor(AppTheme.Colors.primaryText)
+                                            .foregroundStyle(AppTheme.Colors.primaryText)
                                             .lineLimit(1)
 
                                         Text(formatDate(conversation.updatedAt))
                                             .font(AppTheme.Typography.caption1)
-                                            .foregroundColor(AppTheme.Colors.tertiaryText)
+                                            .foregroundStyle(AppTheme.Colors.tertiaryText)
                                     }
 
                                     Spacer()
 
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(AppTheme.Colors.tertiaryText)
+                                        .foregroundStyle(AppTheme.Colors.tertiaryText)
                                 }
                                 .padding(.vertical, AppTheme.Spacing.xxSmall)
                             }
@@ -66,7 +66,7 @@ struct ConversationListView: View {
             .navigationTitle("历史对话")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button {
                         viewModel.createNewConversation()
                         dismiss()
@@ -76,13 +76,13 @@ struct ConversationListView: View {
                             Text("新对话")
                         }
                         .font(AppTheme.Typography.subheadline)
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("完成") { dismiss() }
                         .font(AppTheme.Typography.subheadline)
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                 }
             }
         }

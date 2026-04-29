@@ -96,7 +96,7 @@ struct MaterialRatioBar: View {
                         .frame(width: 8, height: 8)
                     Text(result.material.name)
                         .font(AppTheme.Typography.caption2)
-                        .foregroundColor(AppTheme.Colors.secondaryText)
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
                 }
             }
         }
@@ -142,7 +142,7 @@ struct LiveMaterialRatioBar: View {
                         .frame(width: 8, height: 8)
                     Text(material.name)
                         .font(AppTheme.Typography.caption2)
-                        .foregroundColor(AppTheme.Colors.secondaryText)
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
                 }
             }
         }
@@ -165,7 +165,7 @@ struct RatioSliderField: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(AppTheme.Typography.caption1)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
             
             HStack(spacing: 12) {
                 Slider(value: sliderValue, in: 0...10, step: 0.1)
@@ -208,7 +208,7 @@ struct StackedBar: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(AppTheme.Typography.caption1)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
             
             GeometryReader { geo in
                 HStack(spacing: 1) {
@@ -223,7 +223,7 @@ struct StackedBar: View {
                                 if fraction >= 0.15 {
                                     Text("\(pct)%")
                                         .font(.system(size: 10, weight: .semibold))
-                                        .foregroundColor(.white)
+                                        .foregroundStyle(.white)
                                 }
                             }
                     }

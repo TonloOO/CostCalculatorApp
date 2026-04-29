@@ -16,7 +16,7 @@ struct CardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(backgroundColor)
-            .cornerRadius(cornerRadius)
+            .clipShape(.rect(cornerRadius: cornerRadius))
             .shadow(color: shadow.color, radius: shadow.radius, x: shadow.x, y: shadow.y)
     }
 }
@@ -29,7 +29,7 @@ struct GradientCardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(gradient)
-            .cornerRadius(cornerRadius)
+            .clipShape(.rect(cornerRadius: cornerRadius))
             .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
     }
 }
@@ -42,7 +42,7 @@ struct PrimaryButtonModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .font(AppTheme.Typography.buttonText)
-            .foregroundColor(.white)
+            .foregroundStyle(.white)
             .padding(.horizontal, AppTheme.Spacing.large)
             .padding(.vertical, AppTheme.Spacing.medium)
             .background(
@@ -54,7 +54,7 @@ struct PrimaryButtonModifier: ViewModifier {
                     }
                 }
             )
-            .cornerRadius(AppTheme.CornerRadius.medium)
+            .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
             .scaleEffect(isPressed ? 0.95 : 1.0)
             .shadow(color: isDisabled ? .clear : AppTheme.Colors.shadow, 
                    radius: isPressed ? 2 : 6, 
@@ -77,7 +77,7 @@ struct SecondaryButtonModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .font(AppTheme.Typography.buttonText)
-            .foregroundColor(AppTheme.Colors.primary)
+            .foregroundStyle(AppTheme.Colors.primary)
             .padding(.horizontal, AppTheme.Spacing.large)
             .padding(.vertical, AppTheme.Spacing.medium)
             .background(
@@ -104,7 +104,7 @@ struct CustomTextFieldStyle: ViewModifier {
         content
             .padding(AppTheme.Spacing.small)
             .background(AppTheme.Colors.secondaryBackground)
-            .cornerRadius(AppTheme.CornerRadius.small)
+            .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.small))
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
                     .stroke(isFocused ? AppTheme.Colors.primary : Color.clear, lineWidth: 2)
@@ -120,10 +120,10 @@ struct FloatingActionButtonStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .font(.system(size: 24, weight: .medium))
-            .foregroundColor(.white)
+            .foregroundStyle(.white)
             .frame(width: 56, height: 56)
             .background(AppTheme.Colors.primaryGradient)
-            .cornerRadius(28)
+            .clipShape(.rect(cornerRadius: 28))
             .shadow(color: AppTheme.Colors.shadow, radius: 8, x: 0, y: 4)
             .scaleEffect(isPressed ? 0.9 : 1.0)
             .onLongPressGesture(minimumDuration: .infinity, maximumDistance: .infinity,
@@ -148,7 +148,7 @@ struct GlassMorphismStyle: ViewModifier {
                     VisualEffectBlur(blurStyle: .systemUltraThinMaterial)
                 }
             )
-            .cornerRadius(cornerRadius)
+            .clipShape(.rect(cornerRadius: cornerRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .stroke(Color.white.opacity(0.2), lineWidth: 1)

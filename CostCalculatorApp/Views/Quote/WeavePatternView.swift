@@ -88,12 +88,12 @@ struct WeavePatternView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(p.quoteNo)
                         .font(AppTheme.Typography.headline)
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
 
                     if let name = p.materialName, !name.isEmpty {
                         Text("品名: \(name)")
                             .font(AppTheme.Typography.footnote)
-                            .foregroundColor(AppTheme.Colors.primary)
+                            .foregroundStyle(AppTheme.Colors.primary)
                     }
                 }
                 Spacer()
@@ -105,7 +105,7 @@ struct WeavePatternView: View {
         }
         .padding(AppTheme.Spacing.medium)
         .background(AppTheme.Colors.background)
-        .cornerRadius(AppTheme.CornerRadius.medium)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
         .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
     }
 
@@ -121,11 +121,11 @@ struct WeavePatternView: View {
                     .frame(width: 8, height: 8)
                 Text(title)
                     .font(AppTheme.Typography.headline)
-                    .foregroundColor(AppTheme.Colors.primaryText)
+                    .foregroundStyle(AppTheme.Colors.primaryText)
                 Spacer()
                 Text("\(layout?.width ?? grid.width) × \(layout?.height ?? grid.height)")
                     .font(AppTheme.Typography.caption1)
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                    .foregroundStyle(AppTheme.Colors.tertiaryText)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(AppTheme.Colors.secondaryBackground)
@@ -136,7 +136,7 @@ struct WeavePatternView: View {
         }
         .padding(AppTheme.Spacing.medium)
         .background(AppTheme.Colors.background)
-        .cornerRadius(AppTheme.CornerRadius.medium)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
         .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
     }
 
@@ -184,7 +184,7 @@ struct WeavePatternView: View {
                                             if filled && col < grid.width {
                                                 Text("\(col + 1)")
                                                     .font(.system(size: max(8, cellSize * 0.55), weight: .medium))
-                                                    .foregroundColor(AppTheme.Colors.primaryText)
+                                                    .foregroundStyle(AppTheme.Colors.primaryText)
                                             }
                                         }
                                     )
@@ -195,7 +195,7 @@ struct WeavePatternView: View {
                 }
                 .padding(AppTheme.Spacing.xSmall)
                 .background(AppTheme.Colors.groupedBackground)
-                .cornerRadius(AppTheme.CornerRadius.small)
+                .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.small))
 
                 if let layout, !layout.sections.isEmpty {
                     compactLegendView(
@@ -233,7 +233,7 @@ struct WeavePatternView: View {
             .overlay(
                 Text(text)
                     .font(AppTheme.Typography.caption2.weight(.semibold))
-                    .foregroundColor(AppTheme.Colors.secondaryText)
+                    .foregroundStyle(AppTheme.Colors.secondaryText)
             )
             .frame(width: width, height: height)
     }
@@ -253,11 +253,11 @@ struct WeavePatternView: View {
                 VStack(spacing: 4) {
                     Text("\(section.cumulativeEndsAt)")
                         .font(AppTheme.Typography.footnote)
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
 
                     Text("\(section.repeat)次")
                         .font(AppTheme.Typography.title3)
-                        .foregroundColor(AppTheme.Colors.secondaryText)
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: CGFloat(rowCount) * cellSize + CGFloat(max(rowCount - 1, 0)) * spacing)
@@ -301,7 +301,7 @@ struct WeavePatternView: View {
                         .frame(width: 8, height: 8)
                     Text("排列与穿法")
                         .font(AppTheme.Typography.headline)
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
                 }
 
                 ForEach(visible, id: \.0) { label, value in
@@ -310,7 +310,7 @@ struct WeavePatternView: View {
             }
             .padding(AppTheme.Spacing.medium)
             .background(AppTheme.Colors.background)
-            .cornerRadius(AppTheme.CornerRadius.medium)
+            .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
             .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
         )
     }
@@ -331,7 +331,7 @@ struct WeavePatternView: View {
                         .frame(width: 8, height: 8)
                     Text("\(title)规则")
                         .font(AppTheme.Typography.headline)
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
                 }
 
                 ForEach(repeatSummary, id: \.self) { summary in
@@ -344,7 +344,7 @@ struct WeavePatternView: View {
             }
             .padding(AppTheme.Spacing.medium)
             .background(AppTheme.Colors.background)
-            .cornerRadius(AppTheme.CornerRadius.medium)
+            .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
             .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
         )
     }
@@ -359,7 +359,7 @@ struct WeavePatternView: View {
                     .frame(width: 8, height: 8)
                 Text("工艺参数")
                     .font(AppTheme.Typography.headline)
-                    .foregroundColor(AppTheme.Colors.primaryText)
+                    .foregroundStyle(AppTheme.Colors.primaryText)
             }
 
             LazyVGrid(columns: [
@@ -401,7 +401,7 @@ struct WeavePatternView: View {
         }
         .padding(AppTheme.Spacing.medium)
         .background(AppTheme.Colors.background)
-        .cornerRadius(AppTheme.CornerRadius.medium)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
         .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
     }
 
@@ -428,31 +428,31 @@ struct WeavePatternView: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label)
                 .font(AppTheme.Typography.caption1)
-                .foregroundColor(AppTheme.Colors.tertiaryText)
+                .foregroundStyle(AppTheme.Colors.tertiaryText)
             Text(value)
                 .font(AppTheme.Typography.footnote)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(AppTheme.Spacing.small)
         .background(AppTheme.Colors.secondaryBackground.opacity(0.5))
-        .cornerRadius(AppTheme.CornerRadius.small)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.small))
     }
 
     private func errorContent(_ message: String) -> some View {
         VStack(spacing: AppTheme.Spacing.medium) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.Colors.warning)
+                .foregroundStyle(AppTheme.Colors.warning)
 
             Text("加载失败")
                 .font(AppTheme.Typography.title3)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
 
             Text(message)
                 .font(AppTheme.Typography.footnote)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, AppTheme.Spacing.xxLarge)
 

@@ -25,7 +25,7 @@ struct CalculationHomeView: View {
                 VStack(spacing: AppTheme.Spacing.large) {
                     Text("选择计算模式开始")
                         .font(AppTheme.Typography.subheadline)
-                        .foregroundColor(AppTheme.Colors.secondaryText)
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, AppTheme.Spacing.large)
                     
@@ -75,11 +75,13 @@ struct CalculationHomeView: View {
         .background(AppTheme.Colors.groupedBackground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showingHistory) {
-            NavigationView {
+            NavigationStack {
                 HistoryView()
-                    .navigationBarItems(trailing: Button("关闭") {
-                        showingHistory = false
-                    })
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("关闭") { showingHistory = false }
+                        }
+                    }
             }
         }
     }
@@ -97,30 +99,28 @@ struct QuickStatCard: View {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
                 Text(title)
                     .font(AppTheme.Typography.caption1)
-                    .foregroundColor(AppTheme.Colors.secondaryText)
+                    .foregroundStyle(AppTheme.Colors.secondaryText)
                 
                 Text(value)
                     .font(AppTheme.Typography.title2)
-                    .foregroundColor(AppTheme.Colors.primaryText)
+                    .foregroundStyle(AppTheme.Colors.primaryText)
             }
             
             Spacer()
             
             Image(systemName: icon)
                 .font(.system(size: 24))
-                .foregroundColor(color)
+                .foregroundStyle(color)
         }
         .padding(AppTheme.Spacing.medium)
         .frame(maxWidth: .infinity)
         .background(AppTheme.Colors.background)
-        .cornerRadius(AppTheme.CornerRadius.medium)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
         .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
     }
 }
 
-struct CalculationHomeView_Previews: PreviewProvider {
-    static var previews: some View {
-        CalculationHomeView()
-    }
+#Preview {
+    CalculationHomeView()
 }
 

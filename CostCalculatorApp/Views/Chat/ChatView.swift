@@ -37,7 +37,7 @@ struct ChatView: View {
         }
         .sheet(isPresented: $showCalculator) {
             if let result = viewModel.recognitionForCalculator {
-                NavigationView {
+                NavigationStack {
                     Group {
                         if result.isSingleMaterial {
                             CostCalculatorView(prefillData: result)
@@ -46,9 +46,9 @@ struct ChatView: View {
                         }
                     }
                     .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
+                        ToolbarItem(placement: .topBarTrailing) {
                             Button("关闭") { showCalculator = false }
-                                .foregroundColor(AppTheme.Colors.primary)
+                                .foregroundStyle(AppTheme.Colors.primary)
                         }
                     }
                 }
@@ -61,8 +61,8 @@ struct ChatView: View {
             Button("从相册选择") {}
             Button("取消", role: .cancel) {}
         }
-        .onChange(of: selectedPhotoItem) { newItem in
-            guard let newItem = newItem else { return }
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            guard let newItem else { return }
             Task {
                 if let data = try? await newItem.loadTransferable(type: Data.self),
                    let image = UIImage(data: data) {
@@ -71,7 +71,7 @@ struct ChatView: View {
                 selectedPhotoItem = nil
             }
         }
-        .onChange(of: viewModel.navigateToCalculator) { navigate in
+        .onChange(of: viewModel.navigateToCalculator) { _, navigate in
             if navigate {
                 showCalculator = true
                 viewModel.navigateToCalculator = false
@@ -89,7 +89,7 @@ struct ChatView: View {
             } label: {
                 Image(systemName: "bubble.left.and.bubble.right")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(AppTheme.Colors.primary)
+                    .foregroundStyle(AppTheme.Colors.primary)
             }
             .padding(.leading, AppTheme.Spacing.medium)
 
@@ -97,7 +97,7 @@ struct ChatView: View {
 
             Text("织梦·雅集")
                 .font(AppTheme.Typography.title3)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
 
             Spacer()
 
@@ -106,7 +106,7 @@ struct ChatView: View {
             } label: {
                 Image(systemName: "square.and.pencil")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(AppTheme.Colors.primary)
+                    .foregroundStyle(AppTheme.Colors.primary)
             }
             .padding(.trailing, AppTheme.Spacing.medium)
         }
@@ -143,7 +143,7 @@ struct ChatView: View {
                                 .tint(AppTheme.Colors.primary)
                             Text("正在识别...")
                                 .font(AppTheme.Typography.caption1)
-                                .foregroundColor(AppTheme.Colors.secondaryText)
+                                .foregroundStyle(AppTheme.Colors.secondaryText)
                         }
                         .padding()
                     }
@@ -154,12 +154,12 @@ struct ChatView: View {
                 }
                 .padding(.vertical, AppTheme.Spacing.small)
             }
-            .onChange(of: viewModel.messages.count) { _ in
+            .onChange(of: viewModel.messages.count) {
                 withAnimation(AppTheme.Animation.standard) {
                     proxy.scrollTo("bottom_anchor", anchor: .bottom)
                 }
             }
-            .onChange(of: viewModel.scrollToBottomTrigger) { _ in
+            .onChange(of: viewModel.scrollToBottomTrigger) {
                 proxy.scrollTo("bottom_anchor", anchor: .bottom)
             }
             .onTapGesture {
@@ -176,11 +176,11 @@ struct ChatView: View {
 
             Text("织梦·雅集")
                 .font(AppTheme.Typography.title2)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
 
             Text("发送文字提问，或上传纺织品规格图片\n自动识别参数并填入计算器")
                 .font(AppTheme.Typography.subheadline)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
                 .multilineTextAlignment(.center)
 
             HStack(spacing: AppTheme.Spacing.small) {
@@ -200,10 +200,10 @@ struct ChatView: View {
             VStack(spacing: AppTheme.Spacing.xSmall) {
                 Image(systemName: icon)
                     .font(.system(size: 22))
-                    .foregroundColor(AppTheme.Colors.primary)
+                    .foregroundStyle(AppTheme.Colors.primary)
                 Text(text)
                     .font(AppTheme.Typography.caption1)
-                    .foregroundColor(AppTheme.Colors.secondaryText)
+                    .foregroundStyle(AppTheme.Colors.secondaryText)
             }
             .frame(width: 100, height: 70)
             .background(AppTheme.Colors.secondaryBackground)
@@ -227,7 +227,7 @@ struct ChatView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 18))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .shadow(radius: 2)
                 }
                 .offset(x: 6, y: -6)
@@ -249,7 +249,7 @@ struct ChatView: View {
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 20))
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                         .frame(width: 36, height: 36)
                 }
 
@@ -260,7 +260,7 @@ struct ChatView: View {
                 } label: {
                     Image(systemName: "camera")
                         .font(.system(size: 20))
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                         .frame(width: 36, height: 36)
                 }
 

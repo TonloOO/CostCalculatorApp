@@ -16,7 +16,7 @@ struct QuoteDetailView: View {
     @State private var showReferenceQuote = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Group {
                 if viewModel.isLoading {
                     LoadingView(message: "加载报价详情...")
@@ -29,10 +29,10 @@ struct QuoteDetailView: View {
             .navigationTitle(quoteNo)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("关闭") { dismiss() }
                 }
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         showReferenceQuote = true
                     } label: {
@@ -94,12 +94,12 @@ struct QuoteDetailView: View {
                     Text(d.quoteNo)
                         .font(AppTheme.Typography.title1)
                         .fontWeight(.bold)
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
 
                     if let name = d.materialName, !name.isEmpty {
                         Text(name)
                             .font(AppTheme.Typography.body)
-                            .foregroundColor(AppTheme.Colors.secondaryText)
+                            .foregroundStyle(AppTheme.Colors.secondaryText)
                     }
                 }
 
@@ -109,7 +109,7 @@ struct QuoteDetailView: View {
                     Text(statusText)
                         .font(AppTheme.Typography.body)
                         .fontWeight(.semibold)
-                        .foregroundColor(statusColor(d.normalizedStatus))
+                        .foregroundStyle(statusColor(d.normalizedStatus))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(statusColor(d.normalizedStatus).opacity(0.12))
@@ -121,18 +121,18 @@ struct QuoteDetailView: View {
                 HStack {
                     Text("报价单价")
                         .font(AppTheme.Typography.footnote)
-                        .foregroundColor(AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(AppTheme.Colors.tertiaryText)
                     Spacer()
                     Text(String(format: "¥%.2f", price))
                         .font(AppTheme.Typography.title2)
                         .fontWeight(.bold)
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                 }
             }
         }
         .padding(AppTheme.Spacing.medium)
         .background(AppTheme.Colors.background)
-        .cornerRadius(AppTheme.CornerRadius.medium)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
     }
 
     // MARK: - Basic Info
@@ -155,11 +155,11 @@ struct QuoteDetailView: View {
                 HStack(alignment: .top) {
                     Text("备注")
                         .font(AppTheme.Typography.body)
-                        .foregroundColor(AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(AppTheme.Colors.tertiaryText)
                         .frame(width: 72, alignment: .leading)
                     Text(remark)
                         .font(AppTheme.Typography.body)
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
                     Spacer()
                 }
                 .padding(.top, 4)
@@ -258,13 +258,13 @@ struct QuoteDetailView: View {
                                 Text(usage)
                                     .font(AppTheme.Typography.footnote)
                                     .fontWeight(.medium)
-                                    .foregroundColor(isWarpUsage(m.usage) ? AppTheme.Colors.primary : AppTheme.Colors.accent)
+                                    .foregroundStyle(isWarpUsage(m.usage) ? AppTheme.Colors.primary : AppTheme.Colors.accent)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .background(
                                         (isWarpUsage(m.usage) ? AppTheme.Colors.primary : AppTheme.Colors.accent).opacity(0.1)
                                     )
-                                    .cornerRadius(6)
+                                    .clipShape(.rect(cornerRadius: 6))
                             }
 
                             Spacer()
@@ -272,7 +272,7 @@ struct QuoteDetailView: View {
                             if let no = m.materialNo, !no.isEmpty {
                                 Text(no)
                                     .font(AppTheme.Typography.footnote)
-                                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                                    .foregroundStyle(AppTheme.Colors.tertiaryText)
                             }
                         }
 
@@ -281,11 +281,11 @@ struct QuoteDetailView: View {
                                 Text(m.materialName ?? "-")
                                     .font(AppTheme.Typography.body)
                                     .fontWeight(.semibold)
-                                    .foregroundColor(AppTheme.Colors.primaryText)
+                                    .foregroundStyle(AppTheme.Colors.primaryText)
                                 if let provider = m.providerName, !provider.isEmpty {
                                     Text(provider)
                                         .font(AppTheme.Typography.footnote)
-                                        .foregroundColor(AppTheme.Colors.secondaryText)
+                                        .foregroundStyle(AppTheme.Colors.secondaryText)
                                 }
                             }
 
@@ -294,11 +294,11 @@ struct QuoteDetailView: View {
                             VStack(alignment: .trailing, spacing: 4) {
                                 Text("原料成本")
                                     .font(AppTheme.Typography.footnote)
-                                    .foregroundColor(AppTheme.Colors.primary)
+                                    .foregroundStyle(AppTheme.Colors.primary)
                                 Text(fmtPrice(m.dtlYarnCost))
                                     .font(AppTheme.Typography.title3)
                                     .fontWeight(.bold)
-                                    .foregroundColor(AppTheme.Colors.primary)
+                                    .foregroundStyle(AppTheme.Colors.primary)
                             }
                         }
 
@@ -315,12 +315,12 @@ struct QuoteDetailView: View {
                         if let remark = m.remark, !remark.isEmpty {
                             Text(remark)
                                 .font(AppTheme.Typography.footnote)
-                                .foregroundColor(AppTheme.Colors.tertiaryText)
+                                .foregroundStyle(AppTheme.Colors.tertiaryText)
                         }
                     }
                     .padding(AppTheme.Spacing.medium)
                     .background(AppTheme.Colors.secondaryBackground.opacity(0.55))
-                    .cornerRadius(AppTheme.CornerRadius.medium)
+                    .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
                 }
             }
         )
@@ -339,17 +339,17 @@ struct QuoteDetailView: View {
                     HStack {
                         Text(f.finishMode ?? "-")
                             .font(AppTheme.Typography.footnote)
-                            .foregroundColor(AppTheme.Colors.primaryText)
+                            .foregroundStyle(AppTheme.Colors.primaryText)
                         Spacer()
                         if let count = f.count {
                             Text("\(count)次")
                                 .font(AppTheme.Typography.caption1)
-                                .foregroundColor(AppTheme.Colors.secondaryText)
+                                .foregroundStyle(AppTheme.Colors.secondaryText)
                         }
                         if let price = f.price {
                             Text(String(format: "¥%.2f", price))
                                 .font(AppTheme.Typography.footnote)
-                                .foregroundColor(AppTheme.Colors.primaryText)
+                                .foregroundStyle(AppTheme.Colors.primaryText)
                                 .fontWeight(.medium)
                         }
                     }
@@ -365,10 +365,10 @@ struct QuoteDetailView: View {
         VStack(spacing: AppTheme.Spacing.medium) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.Colors.warning)
+                .foregroundStyle(AppTheme.Colors.warning)
             Text(message)
                 .font(AppTheme.Typography.footnote)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, AppTheme.Spacing.xxLarge)
             Button("重试") {
@@ -383,11 +383,11 @@ struct QuoteDetailView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(AppTheme.Typography.footnote)
-                .foregroundColor(AppTheme.Colors.tertiaryText)
+                .foregroundStyle(AppTheme.Colors.tertiaryText)
             Text(value)
                 .font(AppTheme.Typography.body)
                 .fontWeight(.medium)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
         }
     }
 
@@ -480,18 +480,18 @@ private struct DetailSection<Content: View>: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(AppTheme.Colors.primary)
+                    .foregroundStyle(AppTheme.Colors.primary)
                 Text(title)
                     .font(AppTheme.Typography.title3)
                     .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.Colors.primaryText)
+                    .foregroundStyle(AppTheme.Colors.primaryText)
             }
 
             content
         }
         .padding(AppTheme.Spacing.large)
         .background(AppTheme.Colors.background)
-        .cornerRadius(AppTheme.CornerRadius.medium)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
     }
 }
 
@@ -517,11 +517,11 @@ private struct DetailCell: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .font(AppTheme.Typography.footnote)
-                .foregroundColor(AppTheme.Colors.tertiaryText)
+                .foregroundStyle(AppTheme.Colors.tertiaryText)
             Text(value ?? "-")
                 .font(AppTheme.Typography.body)
                 .fontWeight(.medium)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
                 .lineLimit(3)
         }
     }

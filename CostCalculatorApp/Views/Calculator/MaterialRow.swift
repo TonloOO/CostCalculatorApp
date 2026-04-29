@@ -41,7 +41,7 @@ struct MaterialRow: View {
                     Button(action: onDelete) {
                         Image(systemName: "trash")
                             .font(.system(size: 14))
-                            .foregroundColor(AppTheme.Colors.error.opacity(0.7))
+                            .foregroundStyle(AppTheme.Colors.error.opacity(0.7))
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
@@ -51,10 +51,10 @@ struct MaterialRow: View {
                 }) {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(AppTheme.Colors.tertiaryText)
                         .frame(width: 28, height: 28)
                         .background(AppTheme.Colors.tertiaryBackground)
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 .buttonStyle(PlainButtonStyle())
             }
@@ -76,7 +76,7 @@ struct MaterialRow: View {
                     )) {
                         Text("经纱参数")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(AppTheme.Colors.secondaryText)
+                            .foregroundStyle(AppTheme.Colors.secondaryText)
                     }
                     .toggleStyle(.switch)
                     .controlSize(.mini)
@@ -113,7 +113,7 @@ struct MaterialRow: View {
                     )) {
                         Text("纬纱参数")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(AppTheme.Colors.secondaryText)
+                            .foregroundStyle(AppTheme.Colors.secondaryText)
                     }
                     .toggleStyle(.switch)
                     .controlSize(.mini)

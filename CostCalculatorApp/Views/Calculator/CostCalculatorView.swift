@@ -131,12 +131,12 @@ struct CostCalculatorView: View {
                         Button(action: { activeSheet = .history }) {
                             Image(systemName: "clock.arrow.circlepath")
                                 .font(.system(size: 18))
-                                .foregroundColor(AppTheme.Colors.primaryText)
+                                .foregroundStyle(AppTheme.Colors.primaryText)
                         }
                         Button(action: { activeSheet = .constants }) {
                             Image(systemName: "slider.horizontal.3")
                                 .font(.system(size: 18))
-                                .foregroundColor(AppTheme.Colors.primaryText)
+                                .foregroundStyle(AppTheme.Colors.primaryText)
                         }
                     }
                 }
@@ -165,7 +165,7 @@ struct CostCalculatorView: View {
                                 HStack {
                                     Text("经纱")
                                         .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(AppTheme.Colors.primaryText)
+                                        .foregroundStyle(AppTheme.Colors.primaryText)
                                     Spacer()
                                     Toggle("直接输入克重", isOn: $useDirectWarpWeight)
                                         .font(.system(size: 12))
@@ -202,7 +202,7 @@ struct CostCalculatorView: View {
                                 HStack {
                                     Text("纬纱")
                                         .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(AppTheme.Colors.primaryText)
+                                        .foregroundStyle(AppTheme.Colors.primaryText)
                                     Spacer()
                                     Toggle("直接输入克重", isOn: $useDirectWeftWeight)
                                         .font(.system(size: 12))
@@ -294,11 +294,11 @@ struct CostCalculatorView: View {
                     Text("计算总费用")
                 }
                 .font(AppTheme.Typography.buttonText)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(AppTheme.Colors.primaryGradient)
-                .cornerRadius(AppTheme.CornerRadius.medium)
+                .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
                 .shadow(color: AppTheme.Colors.primary.opacity(0.4), radius: 8, x: 0, y: 4)
             }
             .padding(.horizontal, AppTheme.Spacing.large)
@@ -343,7 +343,7 @@ struct CostCalculatorView: View {
         .sheet(item: $activeSheet) { item in
             switch item {
             case .results:
-                NavigationView {
+                NavigationStack {
                     if let record = lastSavedRecord {
                         CalculationDetailView(
                             record: record,
@@ -357,11 +357,13 @@ struct CostCalculatorView: View {
                     dismissAction: { activeSheet = nil }
                 )
             case .history:
-                NavigationView {
+                NavigationStack {
                     HistoryView()
-                        .navigationBarItems(trailing: Button("关闭") {
-                            activeSheet = nil
-                        })
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("关闭") { activeSheet = nil }
+                            }
+                        }
                 }
             }
         }

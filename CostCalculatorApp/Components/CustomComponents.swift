@@ -21,7 +21,7 @@ struct CustomNavigationBar: View {
                 Button(action: leftAction) {
                     Image(systemName: leftIcon)
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
                 }
             }
             
@@ -29,7 +29,7 @@ struct CustomNavigationBar: View {
             
             Text(title)
                 .font(AppTheme.Typography.title3)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
             
             Spacer()
             
@@ -37,7 +37,7 @@ struct CustomNavigationBar: View {
                 Button(action: rightAction) {
                     Image(systemName: rightIcon)
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
                 }
             }
         }
@@ -60,26 +60,26 @@ struct FeatureCard: View {
             HStack {
                 Image(systemName: icon)
                     .font(.system(size: 28, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                 
                 Spacer()
                 
                 Image(systemName: "arrow.forward.circle.fill")
                     .font(.system(size: 24))
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundStyle(.white.opacity(0.8))
             }
             
             Spacer()
             
             Text(title)
                 .font(AppTheme.Typography.title3)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .lineLimit(2)
             
             if let subtitle = subtitle {
                 Text(subtitle)
                     .font(AppTheme.Typography.footnote)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundStyle(.white.opacity(0.8))
                     .lineLimit(1)
             }
         }
@@ -87,7 +87,7 @@ struct FeatureCard: View {
         .frame(height: 160)
         .frame(maxWidth: .infinity)
         .background(gradient)
-        .cornerRadius(AppTheme.CornerRadius.large)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.large))
         .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
     }
 }
@@ -139,12 +139,12 @@ struct TabBarItem: View {
                 Image(systemName: tab.rawValue)
                     .font(.system(size: 24))
                     .symbolVariant(isSelected ? .fill : .none)
-                    .foregroundColor(isSelected ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
+                    .foregroundStyle(isSelected ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
                     .scaleEffect(isSelected ? 1.1 : 1.0)
                 
                 Text(tabLabel(for: tab))
                     .font(AppTheme.Typography.caption2)
-                    .foregroundColor(isSelected ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
+                    .foregroundStyle(isSelected ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
             }
             .frame(maxWidth: .infinity)
         }
@@ -176,13 +176,13 @@ struct ModernInputField: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
             Text(label)
                 .font(AppTheme.Typography.caption1)
-                .foregroundColor(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
+                .foregroundStyle(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
             
             HStack {
                 if let icon = icon {
                     Image(systemName: icon)
                         .font(.system(size: 16))
-                        .foregroundColor(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
                 }
                 
                 TextField(placeholder, text: $text)
@@ -193,12 +193,12 @@ struct ModernInputField: View {
                 if !suffix.isEmpty {
                     Text(suffix)
                         .font(AppTheme.Typography.footnote)
-                        .foregroundColor(AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(AppTheme.Colors.tertiaryText)
                 }
             }
             .padding(AppTheme.Spacing.small)
             .background(AppTheme.Colors.secondaryBackground)
-            .cornerRadius(AppTheme.CornerRadius.small)
+            .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.small))
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
                     .stroke(isFocused ? AppTheme.Colors.primary : Color.clear, lineWidth: 2)
@@ -219,17 +219,17 @@ struct ResultCard: View {
         HStack {
             Image(systemName: icon)
                 .font(.system(size: 24))
-                .foregroundColor(isHighlighted ? AppTheme.Colors.accent : AppTheme.Colors.primary)
+                .foregroundStyle(isHighlighted ? AppTheme.Colors.accent : AppTheme.Colors.primary)
                 .frame(width: 40)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(AppTheme.Typography.caption1)
-                    .foregroundColor(AppTheme.Colors.secondaryText)
+                    .foregroundStyle(AppTheme.Colors.secondaryText)
                 
                 Text(value)
                     .font(isHighlighted ? AppTheme.Typography.title3 : AppTheme.Typography.headline)
-                    .foregroundColor(isHighlighted ? AppTheme.Colors.accent : AppTheme.Colors.primaryText)
+                    .foregroundStyle(isHighlighted ? AppTheme.Colors.accent : AppTheme.Colors.primaryText)
             }
             
             Spacer()
@@ -240,7 +240,7 @@ struct ResultCard: View {
             AppTheme.Colors.accent.opacity(0.1) : 
             AppTheme.Colors.secondaryBackground
         )
-        .cornerRadius(AppTheme.CornerRadius.medium)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
     }
 }
 
@@ -256,16 +256,16 @@ struct EmptyStateView: View {
         VStack(spacing: AppTheme.Spacing.large) {
             Image(systemName: icon)
                 .font(.system(size: 60))
-                .foregroundColor(AppTheme.Colors.tertiaryText)
+                .foregroundStyle(AppTheme.Colors.tertiaryText)
             
             VStack(spacing: AppTheme.Spacing.xSmall) {
                 Text(title)
                     .font(AppTheme.Typography.title3)
-                    .foregroundColor(AppTheme.Colors.primaryText)
+                    .foregroundStyle(AppTheme.Colors.primaryText)
                 
                 Text(subtitle)
                     .font(AppTheme.Typography.body)
-                    .foregroundColor(AppTheme.Colors.secondaryText)
+                    .foregroundStyle(AppTheme.Colors.secondaryText)
                     .multilineTextAlignment(.center)
             }
             
@@ -292,11 +292,11 @@ struct LoadingView: View {
             
             Text(message)
                 .font(AppTheme.Typography.body)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
         }
         .padding(AppTheme.Spacing.xxLarge)
         .background(AppTheme.Colors.background)
-        .cornerRadius(AppTheme.CornerRadius.large)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.large))
         .shadow(color: AppTheme.Colors.shadow, radius: 10, x: 0, y: 5)
     }
 }
@@ -311,7 +311,7 @@ struct SectionHeader: View {
         HStack {
             Text(title)
                 .font(AppTheme.Typography.headline)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
             
             Spacer()
             
@@ -319,7 +319,7 @@ struct SectionHeader: View {
                 Button(action: action) {
                     Text(actionTitle)
                         .font(AppTheme.Typography.footnote)
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                 }
             }
         }
@@ -347,7 +347,7 @@ func customNavHeader<Trailing: View>(
                     Text(backLabel)
                         .font(AppTheme.Typography.subheadline)
                 }
-                .foregroundColor(AppTheme.Colors.primary)
+                .foregroundStyle(AppTheme.Colors.primary)
             }
             
             Spacer()
@@ -357,7 +357,7 @@ func customNavHeader<Trailing: View>(
         
         Text(title)
             .font(AppTheme.Typography.title2)
-            .foregroundColor(AppTheme.Colors.primaryText)
+            .foregroundStyle(AppTheme.Colors.primaryText)
     }
     .padding(.horizontal, AppTheme.Spacing.large)
     .padding(.top, AppTheme.Spacing.xSmall)

@@ -34,11 +34,11 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
             Text("纺织工具")
                 .font(AppTheme.Typography.largeTitle)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
             
             Text("选择功能模块开始使用")
                 .font(AppTheme.Typography.subheadline)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, AppTheme.Spacing.large)
@@ -111,30 +111,30 @@ struct ModuleCard: View {
             HStack {
                 Image(systemName: icon)
                     .font(.system(size: 32, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                 
                 Spacer()
                 
                 Image(systemName: "arrow.forward.circle.fill")
                     .font(.system(size: 24))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundStyle(.white.opacity(0.7))
             }
             
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xxSmall) {
                 Text(title)
                     .font(AppTheme.Typography.title2)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                 
                 Text(subtitle)
                     .font(AppTheme.Typography.footnote)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundStyle(.white.opacity(0.8))
             }
             
             HStack(spacing: AppTheme.Spacing.xSmall) {
                 ForEach(features, id: \.self) { feature in
                     Text(feature)
                         .font(AppTheme.Typography.caption2)
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(Color.white.opacity(0.2))
@@ -145,13 +145,11 @@ struct ModuleCard: View {
         .padding(AppTheme.Spacing.large)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(gradient)
-        .cornerRadius(AppTheme.CornerRadius.large)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.large))
         .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
     }
 }
 
-struct HomeView_Previews: PreviewProvider {
-    static var previews: some View {
-        HomeView()
-    }
+#Preview {
+    HomeView()
 }

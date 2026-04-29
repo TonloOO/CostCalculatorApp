@@ -11,7 +11,7 @@ struct MessageBubbleView: View {
             if !message.isUser {
                 Image(systemName: "sparkles")
                     .font(.system(size: 14))
-                    .foregroundColor(AppTheme.Colors.primary)
+                    .foregroundStyle(AppTheme.Colors.primary)
                     .frame(width: 28, height: 28)
                     .background(AppTheme.Colors.primary.opacity(0.12))
                     .clipShape(Circle())
@@ -31,7 +31,7 @@ struct MessageBubbleView: View {
                     if message.isUser {
                         Text(message.text)
                             .font(AppTheme.Typography.body)
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, AppTheme.Spacing.medium)
                             .padding(.vertical, AppTheme.Spacing.small)
                             .background(AppTheme.Colors.primaryGradient)
@@ -53,7 +53,7 @@ struct MessageBubbleView: View {
             if message.isUser {
                 Image(systemName: "person.circle.fill")
                     .font(.system(size: 14))
-                    .foregroundColor(AppTheme.Colors.secondary)
+                    .foregroundStyle(AppTheme.Colors.secondary)
                     .frame(width: 28, height: 28)
                     .background(AppTheme.Colors.secondary.opacity(0.12))
                     .clipShape(Circle())
