@@ -17,7 +17,7 @@ struct ConstantsSheet: View {
     @State private var defaultDValue: String = ""
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section(header: Text("经纱分母")) {
                     TextField("经纱分母", text: $warpDivider)
@@ -40,15 +40,22 @@ struct ConstantsSheet: View {
                 }
             }
             .navigationTitle("修改计算常量")
-            .navigationBarItems(leading: Button("取消") {
-                HapticFeedbackManager.shared.selectionChanged()
-                dismissAction()
-            }, trailing: Button("保存") {
-                HapticFeedbackManager.shared.notification(type: .success)
-                saveConstants()
-                dismissAction()
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("取消") {
+                        HapticFeedbackManager.shared.selectionChanged()
+                        dismissAction()
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("保存") {
+                        HapticFeedbackManager.shared.notification(type: .success)
+                        saveConstants()
+                        dismissAction()
+                    }
+                    .disabled(!isValid())
+                }
             }
-            .disabled(!isValid()))
             .onAppear {
                 warpDivider = String(constants.warpDivider)
                 weftDivider = String(constants.weftDivider)

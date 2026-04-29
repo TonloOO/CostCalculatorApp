@@ -29,14 +29,14 @@ struct CompactInputField: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(config.label)
                 .font(.system(size: 15))
-                .foregroundColor(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
+                .foregroundStyle(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
                 .animation(AppTheme.Animation.quick, value: isFocused)
             
             HStack(spacing: 4) {
                 if let icon = config.icon {
                     Image(systemName: icon)
                         .font(.system(size: 14))
-                        .foregroundColor(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
                         .frame(width: 20)
                 }
                 
@@ -48,7 +48,7 @@ struct CompactInputField: View {
                 if !config.suffix.isEmpty {
                     Text(config.suffix)
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(AppTheme.Colors.tertiaryText)
                 }
             }
             .padding(.horizontal, 10)
@@ -97,12 +97,12 @@ struct CompactSectionHeader: View {
             if let icon = icon {
                 Image(systemName: icon)
                     .font(.system(size: 15))
-                    .foregroundColor(AppTheme.Colors.primary)
+                    .foregroundStyle(AppTheme.Colors.primary)
             }
             
             Text(title)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(AppTheme.Colors.primary)
+                .foregroundStyle(AppTheme.Colors.primary)
                 .textCase(.uppercase)
             
             Spacer()
@@ -111,7 +111,7 @@ struct CompactSectionHeader: View {
                 Button(action: action) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 18))
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                 }
             }
         }
@@ -132,7 +132,7 @@ struct CompactYarnInputField: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("\(label)规格")
                 .font(.system(size: 14))
-                .foregroundColor(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
+                .foregroundStyle(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
             
             HStack(spacing: 4) {
                 TextField("", text: $yarnValue)
@@ -148,10 +148,10 @@ struct CompactYarnInputField: View {
                     HStack(spacing: 2) {
                         Text(yarnTypeSelection.rawValue)
                             .font(.system(size: 12))
-                            .foregroundColor(AppTheme.Colors.primaryText)
+                            .foregroundStyle(AppTheme.Colors.primaryText)
                         Image(systemName: "chevron.down")
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.Colors.tertiaryText)
+                            .foregroundStyle(AppTheme.Colors.tertiaryText)
                     }
                 }
             }
@@ -214,7 +214,7 @@ struct StepCard<Content: View>: View {
                         .frame(width: 26, height: 26)
                     Text("\(step)")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                 }
                 
                 Rectangle()
@@ -231,11 +231,11 @@ struct StepCard<Content: View>: View {
                     if let icon = icon {
                         Image(systemName: icon)
                             .font(.system(size: 14))
-                            .foregroundColor(AppTheme.Colors.primary)
+                            .foregroundStyle(AppTheme.Colors.primary)
                     }
                     Text(title)
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                     
                     Spacer()
                     
@@ -243,7 +243,7 @@ struct StepCard<Content: View>: View {
                         Button(action: action) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 18))
-                                .foregroundColor(AppTheme.Colors.primary)
+                                .foregroundStyle(AppTheme.Colors.primary)
                         }
                     }
                 }

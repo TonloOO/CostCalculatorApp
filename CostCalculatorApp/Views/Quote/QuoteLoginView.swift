@@ -46,12 +46,12 @@ struct QuoteLoginView: View {
         .navigationTitle("登录验证")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showSecretSheet = true
                 } label: {
                     Image(systemName: hasSecret ? "key.fill" : "key")
-                        .foregroundColor(hasSecret ? AppTheme.Colors.primary : AppTheme.Colors.error)
+                        .foregroundStyle(hasSecret ? AppTheme.Colors.primary : AppTheme.Colors.error)
                 }
             }
         }
@@ -75,7 +75,7 @@ struct QuoteLoginView: View {
             
             Image(systemName: "lock.shield.fill")
                 .font(.system(size: 36))
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
         }
         .shadow(color: AppTheme.Colors.primary.opacity(0.3), radius: 10, x: 0, y: 5)
     }
@@ -86,11 +86,11 @@ struct QuoteLoginView: View {
         VStack(spacing: AppTheme.Spacing.xSmall) {
             Text("报价审批系统")
                 .font(AppTheme.Typography.title2)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
             
             Text("请使用企业账号登录")
                 .font(AppTheme.Typography.subheadline)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
         }
     }
     
@@ -101,12 +101,12 @@ struct QuoteLoginView: View {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
                 Text("用户名")
                     .font(AppTheme.Typography.caption1)
-                    .foregroundColor(AppTheme.Colors.secondaryText)
+                    .foregroundStyle(AppTheme.Colors.secondaryText)
                 
                 HStack {
                     Image(systemName: "person")
                         .font(.system(size: 16))
-                        .foregroundColor(focusedField == .username ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(focusedField == .username ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
                     
                     TextField("请输入用户名", text: $username)
                         .textContentType(.username)
@@ -118,7 +118,7 @@ struct QuoteLoginView: View {
                 }
                 .padding(AppTheme.Spacing.small)
                 .background(AppTheme.Colors.secondaryBackground)
-                .cornerRadius(AppTheme.CornerRadius.small)
+                .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.small))
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
                         .stroke(focusedField == .username ? AppTheme.Colors.primary : Color.clear, lineWidth: 2)
@@ -128,12 +128,12 @@ struct QuoteLoginView: View {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
                 Text("密码")
                     .font(AppTheme.Typography.caption1)
-                    .foregroundColor(AppTheme.Colors.secondaryText)
+                    .foregroundStyle(AppTheme.Colors.secondaryText)
                 
                 HStack {
                     Image(systemName: "lock")
                         .font(.system(size: 16))
-                        .foregroundColor(focusedField == .password ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(focusedField == .password ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
                     
                     SecureField("请输入密码", text: $password)
                         .textContentType(.password)
@@ -143,7 +143,7 @@ struct QuoteLoginView: View {
                 }
                 .padding(AppTheme.Spacing.small)
                 .background(AppTheme.Colors.secondaryBackground)
-                .cornerRadius(AppTheme.CornerRadius.small)
+                .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.small))
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
                         .stroke(focusedField == .password ? AppTheme.Colors.primary : Color.clear, lineWidth: 2)
@@ -157,7 +157,7 @@ struct QuoteLoginView: View {
                     Text("请先点击右上角设置应用密钥")
                         .font(AppTheme.Typography.footnote)
                 }
-                .foregroundColor(AppTheme.Colors.warning)
+                .foregroundStyle(AppTheme.Colors.warning)
             }
             
             if let error = errorMessage {
@@ -167,7 +167,7 @@ struct QuoteLoginView: View {
                     Text(error)
                         .font(AppTheme.Typography.footnote)
                 }
-                .foregroundColor(AppTheme.Colors.error)
+                .foregroundStyle(AppTheme.Colors.error)
                 .offset(x: isShaking ? -8 : 0)
                 .animation(
                     .default.repeatCount(3, autoreverses: true).speed(6),
@@ -191,7 +191,7 @@ struct QuoteLoginView: View {
                 Text(authManager.isLoading ? "登录中..." : "登录")
                     .fontWeight(.semibold)
             }
-            .foregroundColor(.white)
+            .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, AppTheme.Spacing.medium)
             .background(
@@ -199,7 +199,7 @@ struct QuoteLoginView: View {
                     ? AnyShapeStyle(Color.gray.opacity(0.4))
                     : AnyShapeStyle(AppTheme.Colors.primaryGradient)
             )
-            .cornerRadius(AppTheme.CornerRadius.medium)
+            .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
         }
         .disabled(username.isEmpty || password.isEmpty || !hasSecret || authManager.isLoading)
     }
@@ -240,7 +240,7 @@ struct AppSecretSettingView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section {
                     SecureField("请输入 32 位应用密钥", text: $secret)
@@ -256,9 +256,9 @@ struct AppSecretSettingView: View {
                     Section {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
+                                .foregroundStyle(.green)
                             Text("密钥已保存")
-                                .foregroundColor(.green)
+                                .foregroundStyle(.green)
                         }
                     }
                 }
@@ -266,14 +266,15 @@ struct AppSecretSettingView: View {
             .navigationTitle("密钥设置")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("取消") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("保存") {
                         QuoteAuthManager.shared.saveAppSecret(secret)
                         saved = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(600))
                             dismiss()
                         }
                     }

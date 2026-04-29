@@ -11,7 +11,8 @@ import CoreData
 struct CalculationDetailView: View {
     @ObservedObject var record: CalculationRecord
     var dismissAction: (() -> Void)? = nil
-    
+
+    @Environment(\.displayScale) private var displayScale
     @State private var saveToastMessage: String?
     @State private var showSaveToast = false
     
@@ -42,12 +43,12 @@ struct CalculationDetailView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Label(record.customerName ?? "未知", systemImage: "person.circle.fill")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(AppTheme.Colors.primaryText)
+                                .foregroundStyle(AppTheme.Colors.primaryText)
                             
                             if let date = record.date {
                                 Label("\(date, formatter: dateFormatter)", systemImage: "calendar")
                                     .font(.system(size: 13))
-                                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                                    .foregroundStyle(AppTheme.Colors.tertiaryText)
                             }
                         }
                         Spacer()
@@ -61,14 +62,14 @@ struct CalculationDetailView: View {
                     HStack(alignment: .firstTextBaseline) {
                         Text("总费用")
                             .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(AppTheme.Colors.secondaryText)
+                            .foregroundStyle(AppTheme.Colors.secondaryText)
                         Spacer()
                         Text(String(format: "%.3f", record.totalCost))
                             .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundColor(AppTheme.Colors.accent)
+                            .foregroundStyle(AppTheme.Colors.accent)
                         Text("元/米")
                             .font(.system(size: 13))
-                            .foregroundColor(AppTheme.Colors.secondaryText)
+                            .foregroundStyle(AppTheme.Colors.secondaryText)
                     }
                 }
                 .padding()
@@ -185,15 +186,15 @@ struct CalculationDetailView: View {
         .navigationTitle(isSheetMode ? "计算结果" : "计算详情")
         .toolbar {
             if isSheetMode {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { dismissAction?() }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundColor(AppTheme.Colors.tertiaryText)
+                            .foregroundStyle(AppTheme.Colors.tertiaryText)
                     }
                 }
             } else {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(destination: EditCalculationView(record: record)) {
                         Text("编辑计算")
                     }
@@ -204,7 +205,7 @@ struct CalculationDetailView: View {
             if showSaveToast, let message = saveToastMessage {
                 Text(message)
                     .font(AppTheme.Typography.footnote)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(
@@ -220,15 +221,16 @@ struct CalculationDetailView: View {
     }
     
     // MARK: - 截图保存到相册
+    @MainActor
     private func saveScreenshotToAlbum() {
         let renderer = ImageRenderer(content: screenshotContent)
-        renderer.scale = UIScreen.main.scale
-        
+        renderer.scale = displayScale
+
         guard let image = renderer.uiImage else {
             showToast("截图生成失败")
             return
         }
-        
+
         let saver = ImageSaver { success in
             if success {
                 HapticFeedbackManager.shared.notification(type: .success)
@@ -240,13 +242,14 @@ struct CalculationDetailView: View {
         }
         saver.saveToAlbum(image: image)
     }
-    
+
     private func showToast(_ message: String) {
         saveToastMessage = message
         withAnimation(.easeInOut(duration: 0.3)) {
             showSaveToast = true
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
             withAnimation(.easeInOut(duration: 0.3)) {
                 showSaveToast = false
             }
@@ -260,7 +263,7 @@ struct CalculationDetailView: View {
             HStack {
                 Text("纺织成本计算结果")
                     .font(AppTheme.Typography.title2)
-                    .foregroundColor(AppTheme.Colors.primaryText)
+                    .foregroundStyle(AppTheme.Colors.primaryText)
                 Spacer()
             }
             .padding(.bottom, AppTheme.Spacing.xSmall)
@@ -271,7 +274,7 @@ struct CalculationDetailView: View {
                     HStack {
                         Label(name, systemImage: "person.circle.fill")
                             .font(AppTheme.Typography.body)
-                            .foregroundColor(AppTheme.Colors.primaryText)
+                            .foregroundStyle(AppTheme.Colors.primaryText)
                         Spacer()
                     }
                 }
@@ -286,13 +289,13 @@ struct CalculationDetailView: View {
                 if let date = record.date {
                     Text("计算于 \(date, formatter: dateFormatter)")
                         .font(AppTheme.Typography.caption2)
-                        .foregroundColor(AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(AppTheme.Colors.tertiaryText)
                 }
             }
         }
         .padding(AppTheme.Spacing.large)
         .background(AppTheme.Colors.groupedBackground)
-        .frame(width: UIScreen.main.bounds.width)
+        .containerRelativeFrame(.horizontal)
     }
     
     @ViewBuilder
@@ -413,15 +416,15 @@ struct CalculationDetailView: View {
         HStack {
             Text("总费用")
                 .font(AppTheme.Typography.headline)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
             Spacer()
             Text(String(format: "%.3f", record.totalCost))
                 .font(AppTheme.Typography.title2)
                 .fontWeight(.bold)
-                .foregroundColor(AppTheme.Colors.accent)
+                .foregroundStyle(AppTheme.Colors.accent)
             Text("元/米")
                 .font(AppTheme.Typography.footnote)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
         }
     }
 
@@ -514,7 +517,7 @@ struct DetailCard<Content: View>: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
             Text(title)
                 .font(AppTheme.Typography.headline)
-                .foregroundColor(isHighlighted ? AppTheme.Colors.primary : AppTheme.Colors.primaryText)
+                .foregroundStyle(isHighlighted ? AppTheme.Colors.primary : AppTheme.Colors.primaryText)
             
             content
         }
@@ -539,11 +542,11 @@ struct InfoRow: View {
         HStack {
             Text(label)
                 .font(AppTheme.Typography.footnote)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
             Spacer()
             Text(value)
                 .font(AppTheme.Typography.body)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
         }
     }
 }
@@ -557,15 +560,15 @@ struct ResultRow: View {
         HStack {
             Text(label)
                 .font(AppTheme.Typography.body)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
             Spacer()
             HStack(spacing: 4) {
                 Text(value)
                     .font(AppTheme.Typography.body)
-                    .foregroundColor(AppTheme.Colors.primaryText)
+                    .foregroundStyle(AppTheme.Colors.primaryText)
                 Text(unit)
                     .font(AppTheme.Typography.footnote)
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                    .foregroundStyle(AppTheme.Colors.tertiaryText)
             }
         }
     }

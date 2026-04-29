@@ -19,7 +19,7 @@ struct YarnInputField: View {
 		VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
 			Text("\(label)规格")
 				.font(AppTheme.Typography.caption1)
-				.foregroundColor(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
+				.foregroundStyle(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
 			
 			HStack(spacing: AppTheme.Spacing.xSmall) {
 				TextField("", text: $yarnValue)
@@ -35,10 +35,10 @@ struct YarnInputField: View {
 					HStack(spacing: 4) {
 						Text(yarnTypeSelection.rawValue)
 							.font(AppTheme.Typography.footnote)
-							.foregroundColor(AppTheme.Colors.primaryText)
+							.foregroundStyle(AppTheme.Colors.primaryText)
 						Image(systemName: "chevron.down")
 							.font(.system(size: 12))
-							.foregroundColor(AppTheme.Colors.tertiaryText)
+							.foregroundStyle(AppTheme.Colors.tertiaryText)
 					}
 				}
 			}

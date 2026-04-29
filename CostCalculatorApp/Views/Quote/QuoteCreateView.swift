@@ -114,7 +114,7 @@ struct QuoteCreateView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Group {
                 if vm.isLoadingInitial {
                     ProgressView("加载基础数据...")
@@ -125,10 +125,10 @@ struct QuoteCreateView: View {
             .navigationTitle(vm.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("取消") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     if vm.isSubmitting {
                         ProgressView()
                     } else {
@@ -219,7 +219,7 @@ struct QuoteCreateView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("订单类型")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Picker("订单类型", selection: $vm.orderType) {
                         Text("散单").tag("散单")
                         Text("样单").tag("样单")
@@ -233,19 +233,19 @@ struct QuoteCreateView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("结算方式")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Button {
                         vm.activeSheet = .balanceType
                     } label: {
                         HStack(spacing: 4) {
                             Text(vm.selectedBalanceType?.name ?? "请选择")
                                 .font(.body)
-                                .foregroundColor(vm.selectedBalanceType == nil ? .secondary : .primary)
+                                .foregroundStyle(vm.selectedBalanceType == nil ? .secondary : .primary)
                                 .lineLimit(1)
                             Spacer(minLength: 0)
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -268,7 +268,7 @@ struct QuoteCreateView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("交期")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     DatePicker("", selection: $vm.deliveryDate, displayedComponents: .date)
                         .labelsHidden()
                 }
@@ -277,14 +277,14 @@ struct QuoteCreateView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("订单数量")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     TextField("0", text: $vm.orderQty)
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
                         .background(Color(UIColor.tertiarySystemFill))
-                        .cornerRadius(8)
+                        .clipShape(.rect(cornerRadius: 8))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -330,7 +330,7 @@ struct QuoteCreateView: View {
             if vm.materialRows.isEmpty && vm.materialGuid == nil {
                 Text("请先选择物料，原料配方将自动填充")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 8)
             } else {
@@ -352,7 +352,7 @@ struct QuoteCreateView: View {
                 if !vm.materialRows.isEmpty {
                     Text("\(vm.materialRows.count) 项")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -368,7 +368,7 @@ struct QuoteCreateView: View {
                 Text(row.wrappedValue.usage)
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(
@@ -386,7 +386,7 @@ struct QuoteCreateView: View {
                 if !row.wrappedValue.materialNo.isEmpty {
                     Text(row.wrappedValue.materialNo)
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(.vertical, 4)
@@ -410,7 +410,7 @@ struct QuoteCreateView: View {
                         .font(.subheadline)
                         .fontWeight(.semibold)
                 }
-                .foregroundColor(AppTheme.Colors.primary)
+                .foregroundStyle(AppTheme.Colors.primary)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(
@@ -455,11 +455,11 @@ struct QuoteCreateView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             HStack(spacing: 2) {
                 Text("¥")
                     .font(.subheadline)
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
                 TextField("0.00", text: text)
                     .keyboardType(.decimalPad)
                     .font(.subheadline)
@@ -468,7 +468,7 @@ struct QuoteCreateView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(Color(UIColor.tertiarySystemFill))
-            .cornerRadius(6)
+            .clipShape(.rect(cornerRadius: 6))
         }
     }
 
@@ -479,16 +479,16 @@ struct QuoteCreateView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("供应商")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 HStack(spacing: 8) {
                     Text(row.wrappedValue.providerName.isEmpty ? "请选择" : row.wrappedValue.providerName)
                         .font(.subheadline)
-                        .foregroundColor(row.wrappedValue.providerName.isEmpty ? .secondary : .primary)
+                        .foregroundStyle(row.wrappedValue.providerName.isEmpty ? .secondary : .primary)
                         .lineLimit(1)
                     Spacer(minLength: 4)
                     Image(systemName: "chevron.right")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -508,16 +508,16 @@ struct QuoteCreateView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("更多参数")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 HStack(spacing: 6) {
                     Text(isExpanded ? "收起" : "展开")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                     Spacer(minLength: 4)
                     Image(systemName: isExpanded ? "chevron.up.circle.fill" : "slider.horizontal.3")
                         .font(.subheadline)
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -567,7 +567,7 @@ struct QuoteCreateView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
             TextField("0", text: text)
@@ -577,7 +577,7 @@ struct QuoteCreateView: View {
                 .padding(.horizontal, 6)
                 .padding(.vertical, 6)
                 .background(Color(UIColor.tertiarySystemFill))
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -639,10 +639,10 @@ struct QuoteCreateView: View {
                             Text("方式")
                             Spacer()
                             Text($row.wrappedValue.finishMode.isEmpty ? "请选择" : $row.wrappedValue.finishMode)
-                                .foregroundColor($row.wrappedValue.finishMode.isEmpty ? .secondary : .primary)
+                                .foregroundStyle($row.wrappedValue.finishMode.isEmpty ? .secondary : .primary)
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     .tint(.primary)
@@ -755,14 +755,14 @@ struct QuoteCreateView: View {
             HStack {
                 HStack(spacing: 2) {
                     Text(label)
-                    if required { Text("*").foregroundColor(.red) }
+                    if required { Text("*").foregroundStyle(.red) }
                 }
                 Spacer()
                 Text(value ?? "请选择")
-                    .foregroundColor(value == nil ? .secondary : .primary)
+                    .foregroundStyle(value == nil ? .secondary : .primary)
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .tint(.primary)
@@ -781,7 +781,7 @@ struct QuoteCreateView: View {
 
     private func infoRow(_ label: String, _ value: String) -> some View {
         HStack {
-            Text(label).foregroundColor(.secondary)
+            Text(label).foregroundStyle(.secondary)
             Spacer()
             Text(value)
         }
@@ -812,17 +812,17 @@ private struct CollapsibleSection<Content: View>: View {
                     if badge > 0 && !isExpanded {
                         Text("\(badge) 项已填")
                             .font(.caption2)
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(AppTheme.Colors.primary.opacity(0.8))
-                            .cornerRadius(8)
+                            .clipShape(.rect(cornerRadius: 8))
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption2)
                         .fontWeight(.semibold)
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 }
             }
@@ -846,13 +846,13 @@ private struct RefSearchSheet<T: Identifiable>: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 if isSearching {
                     HStack { Spacer(); ProgressView(); Spacer() }
                 } else if items.isEmpty {
                     Text(searchText.isEmpty ? "暂无数据" : "未找到结果")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .listRowBackground(Color.clear)
                 } else {
@@ -863,11 +863,11 @@ private struct RefSearchSheet<T: Identifiable>: View {
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(display(item))
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                                 if let sub = subtitle?(item), !sub.isEmpty {
                                     Text(sub)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }
@@ -876,13 +876,13 @@ private struct RefSearchSheet<T: Identifiable>: View {
             }
             .searchable(text: $searchText, prompt: "搜索")
             .onAppear { onSearch("") }
-            .onChange(of: searchText) { newValue in
+            .onChange(of: searchText) { _, newValue in
                 onSearch(newValue)
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("关闭") { dismiss() }
                 }
             }

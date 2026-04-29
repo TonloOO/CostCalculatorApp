@@ -79,12 +79,12 @@ struct QuoteOverviewView: View {
 
                 Text("加载中...")
                     .font(AppTheme.Typography.footnote)
-                    .foregroundColor(AppTheme.Colors.primaryText)
+                    .foregroundStyle(AppTheme.Colors.primaryText)
             }
             .padding(.horizontal, AppTheme.Spacing.medium)
             .padding(.vertical, AppTheme.Spacing.small)
             .background(AppTheme.Colors.background)
-            .cornerRadius(AppTheme.CornerRadius.medium)
+            .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
             .shadow(color: AppTheme.Colors.shadow, radius: 8, x: 0, y: 4)
         }
         .transition(.opacity)
@@ -98,7 +98,7 @@ struct QuoteOverviewView: View {
         VStack(spacing: AppTheme.Spacing.xSmall) {
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                    .foregroundStyle(AppTheme.Colors.tertiaryText)
 
                 TextField("搜索编号 / 客户 / 品名 / 原料", text: $viewModel.searchText)
                     .font(AppTheme.Typography.subheadline)
@@ -110,13 +110,13 @@ struct QuoteOverviewView: View {
                         viewModel.refresh()
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(AppTheme.Colors.tertiaryText)
+                            .foregroundStyle(AppTheme.Colors.tertiaryText)
                     }
                 }
             }
             .padding(AppTheme.Spacing.small)
             .background(AppTheme.Colors.secondaryBackground)
-            .cornerRadius(AppTheme.CornerRadius.small)
+            .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.small))
             .padding(.horizontal, AppTheme.Spacing.medium)
 
             // Status chips + date icon
@@ -161,7 +161,7 @@ struct QuoteOverviewView: View {
         } label: {
             Image(systemName: viewModel.dateFrom != nil ? "calendar.badge.checkmark" : "calendar.badge.clock")
                 .font(.system(size: 15))
-                .foregroundColor(viewModel.dateFrom != nil ? .white : AppTheme.Colors.primaryText)
+                .foregroundStyle(viewModel.dateFrom != nil ? .white : AppTheme.Colors.primaryText)
                 .frame(width: 34, height: 28)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -191,7 +191,7 @@ struct QuoteOverviewView: View {
             } label: {
                 Text("修改")
                     .font(AppTheme.Typography.caption2)
-                    .foregroundColor(AppTheme.Colors.primary)
+                    .foregroundStyle(AppTheme.Colors.primary)
             }
 
             Button {
@@ -199,10 +199,10 @@ struct QuoteOverviewView: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 14))
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                    .foregroundStyle(AppTheme.Colors.tertiaryText)
             }
         }
-        .foregroundColor(AppTheme.Colors.primary)
+        .foregroundStyle(AppTheme.Colors.primary)
         .padding(.horizontal, AppTheme.Spacing.small)
         .padding(.vertical, 6)
         .background(
@@ -247,7 +247,7 @@ struct QuoteOverviewView: View {
             .refreshable {
                 await viewModel.refreshAsync()
             }
-            .onChange(of: viewModel.scrollResetToken) { _ in
+            .onChange(of: viewModel.scrollResetToken) {
                 withAnimation(.easeOut(duration: 0.2)) {
                     proxy.scrollTo("list-top", anchor: .top)
                 }
@@ -259,15 +259,15 @@ struct QuoteOverviewView: View {
         VStack(spacing: AppTheme.Spacing.medium) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.Colors.warning)
+                .foregroundStyle(AppTheme.Colors.warning)
             
             Text("连接失败")
                 .font(AppTheme.Typography.title3)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
             
             Text(message)
                 .font(AppTheme.Typography.footnote)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, AppTheme.Spacing.xxLarge)
             
@@ -315,7 +315,7 @@ struct QuoteOverviewCard: View {
             }
         }
         .background(AppTheme.Colors.background)
-        .cornerRadius(AppTheme.CornerRadius.medium)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
         .clipped()
         .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
         .onTapGesture { showDetail = true }
@@ -335,16 +335,16 @@ struct QuoteOverviewCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(quote.materialNo ?? "-")
                         .font(AppTheme.Typography.headline)
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
                     
                     if let materialName = quote.materialName, !materialName.isEmpty {
                         Text(materialName)
                             .font(AppTheme.Typography.caption1)
-                            .foregroundColor(AppTheme.Colors.secondaryText)
+                            .foregroundStyle(AppTheme.Colors.secondaryText)
                     } else {
                         Text(" ")
                             .font(AppTheme.Typography.caption1)
-                            .foregroundColor(.clear)
+                            .foregroundStyle(.clear)
                     }
                 }
                 
@@ -366,10 +366,10 @@ struct QuoteOverviewCard: View {
                     VStack(alignment: .trailing, spacing: 1) {
                         Text("报价")
                             .font(AppTheme.Typography.caption2)
-                            .foregroundColor(AppTheme.Colors.tertiaryText)
+                            .foregroundStyle(AppTheme.Colors.tertiaryText)
                         Text(String(format: "¥%.2f", price))
                             .font(AppTheme.Typography.title3)
-                            .foregroundColor(AppTheme.Colors.primary)
+                            .foregroundStyle(AppTheme.Colors.primary)
                             .fontWeight(.bold)
                     }
                 }
@@ -383,7 +383,7 @@ struct QuoteOverviewCard: View {
                         Text(customer)
                             .font(AppTheme.Typography.footnote)
                     }
-                    .foregroundColor(AppTheme.Colors.secondaryText)
+                    .foregroundStyle(AppTheme.Colors.secondaryText)
                 }
                 
                 if let quoteTime = quote.quoteTime, !quoteTime.isEmpty {
@@ -393,7 +393,7 @@ struct QuoteOverviewCard: View {
                         Text(quoteTime)
                             .font(AppTheme.Typography.footnote)
                     }
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                    .foregroundStyle(AppTheme.Colors.tertiaryText)
                 }
             }
         }
@@ -436,7 +436,7 @@ struct QuoteOverviewCard: View {
                     Text("原料明细")
                         .font(AppTheme.Typography.caption1)
                         .fontWeight(.semibold)
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
                         .padding(.horizontal, AppTheme.Spacing.medium)
 
                     ForEach(materials) { material in
@@ -448,12 +448,12 @@ struct QuoteOverviewCard: View {
                                     Text(material.materialName ?? "-")
                                         .font(AppTheme.Typography.footnote)
                                         .fontWeight(.medium)
-                                        .foregroundColor(AppTheme.Colors.primaryText)
+                                        .foregroundStyle(AppTheme.Colors.primaryText)
 
                                     if let provider = material.providerName, !provider.isEmpty {
                                         Text(provider)
                                             .font(AppTheme.Typography.caption2)
-                                            .foregroundColor(AppTheme.Colors.tertiaryText)
+                                            .foregroundStyle(AppTheme.Colors.tertiaryText)
                                     }
                                 }
 
@@ -463,19 +463,19 @@ struct QuoteOverviewCard: View {
                                     if let yarnUseQty = material.yarnUseQty {
                                         Text(String(format: "用纱量 %.2f", yarnUseQty))
                                             .font(AppTheme.Typography.caption2)
-                                            .foregroundColor(AppTheme.Colors.secondaryText)
+                                            .foregroundStyle(AppTheme.Colors.secondaryText)
                                     }
 
                                     if let price = material.unitPrice {
                                         Text(String(format: "原料单价 ¥%.2f", price))
                                             .font(AppTheme.Typography.caption2)
-                                            .foregroundColor(AppTheme.Colors.secondaryText)
+                                            .foregroundStyle(AppTheme.Colors.secondaryText)
                                             .fontWeight(.medium)
                                     }
 
                                     Text(materialCostText(material.dtlYarnCost))
                                         .font(AppTheme.Typography.caption2)
-                                        .foregroundColor(AppTheme.Colors.primary)
+                                        .foregroundStyle(AppTheme.Colors.primary)
                                         .fontWeight(.semibold)
                                 }
                             }
@@ -508,11 +508,11 @@ struct QuoteOverviewCard: View {
                             .font(AppTheme.Typography.footnote)
                             .fontWeight(.semibold)
                     }
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, AppTheme.Spacing.small)
                     .background(actionColor(for: action))
-                    .cornerRadius(AppTheme.CornerRadius.small)
+                    .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.small))
                 }
                 .disabled(isSubmitting)
                 .confirmationDialog(
@@ -553,13 +553,13 @@ struct QuoteOverviewCard: View {
             Text(usageLabel)
                 .font(AppTheme.Typography.caption2)
                 .fontWeight(.medium)
-                .foregroundColor(isWarp ? AppTheme.Colors.primary : AppTheme.Colors.accent)
+                .foregroundStyle(isWarp ? AppTheme.Colors.primary : AppTheme.Colors.accent)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(
                     (isWarp ? AppTheme.Colors.primary : AppTheme.Colors.accent).opacity(0.12)
                 )
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
         } else {
             Circle()
                 .fill(AppTheme.Colors.primary.opacity(0.6))
@@ -661,7 +661,7 @@ struct FilterChip: View {
         Text(title)
             .font(AppTheme.Typography.footnote)
             .fontWeight(isSelected ? .semibold : .regular)
-            .foregroundColor(isSelected ? .white : AppTheme.Colors.primaryText)
+            .foregroundStyle(isSelected ? .white : AppTheme.Colors.primaryText)
             .lineLimit(1)
             .minimumScaleFactor(0.75)
             .padding(.horizontal, AppTheme.Spacing.small)
@@ -695,19 +695,19 @@ struct MetricItem: View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 13))
-                .foregroundColor(AppTheme.Colors.primary.opacity(0.7))
+                .foregroundStyle(AppTheme.Colors.primary.opacity(0.7))
                 .frame(width: 18)
             
             VStack(alignment: .leading, spacing: 1) {
                 Text(label)
                     .font(AppTheme.Typography.caption2)
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                    .foregroundStyle(AppTheme.Colors.tertiaryText)
                     .lineLimit(1)
                 
                 Text(value)
                     .font(AppTheme.Typography.footnote)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.Colors.primaryText)
+                    .foregroundStyle(AppTheme.Colors.primaryText)
                     .lineLimit(1)
             }
         }
@@ -725,10 +725,10 @@ struct MiniInfo: View {
         HStack(spacing: 3) {
             Image(systemName: icon)
                 .font(.system(size: 10))
-                .foregroundColor(AppTheme.Colors.tertiaryText)
+                .foregroundStyle(AppTheme.Colors.tertiaryText)
             Text(label)
                 .font(AppTheme.Typography.caption2)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
         }
     }
 }

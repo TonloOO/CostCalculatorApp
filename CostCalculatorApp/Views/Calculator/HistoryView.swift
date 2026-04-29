@@ -149,11 +149,13 @@ struct HistoryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "搜索客户名称或单号")
         .sheet(item: $recordToEdit) { record in
-            NavigationView {
+            NavigationStack {
                 EditCalculationView(record: record)
-                    .navigationBarItems(trailing: Button("关闭") {
-                        recordToEdit = nil
-                    })
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("关闭") { recordToEdit = nil }
+                        }
+                    }
             }
         }
         .alert("删除失败", isPresented: $showDeleteError) {
@@ -184,7 +186,7 @@ struct HistoryView: View {
                                 Text(filter.rawValue)
                                     .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
                             }
-                            .foregroundColor(isSelected ? .white : AppTheme.Colors.secondaryText)
+                            .foregroundStyle(isSelected ? .white : AppTheme.Colors.secondaryText)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 7)
                             .background(
@@ -229,7 +231,7 @@ struct HistoryView: View {
         HStack(spacing: 6) {
             Text(title)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(AppTheme.Colors.tertiaryText)
+                .foregroundStyle(AppTheme.Colors.tertiaryText)
                 .frame(width: 12, alignment: .leading)
 
             DatePicker("", selection: selection, displayedComponents: .date)
@@ -293,13 +295,13 @@ struct HistoryRecordRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(record.customerName ?? "未知")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
                         .lineLimit(1)
                     
                     if let date = record.date {
                         Text(date, formatter: compactDateFormatter)
                             .font(.system(size: 12))
-                            .foregroundColor(AppTheme.Colors.tertiaryText)
+                            .foregroundStyle(AppTheme.Colors.tertiaryText)
                     }
                 }
                 
@@ -308,7 +310,7 @@ struct HistoryRecordRow: View {
                 // Material type badge
                 Text(materialType)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(isSingleMaterial ? AppTheme.Colors.primary : Color(hex: "FF6B6B"))
+                    .foregroundStyle(isSingleMaterial ? AppTheme.Colors.primary : Color(hex: "FF6B6B"))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(
@@ -331,14 +333,14 @@ struct HistoryRecordRow: View {
             HStack {
                 Text("总费用")
                     .font(.system(size: 13))
-                    .foregroundColor(AppTheme.Colors.secondaryText)
+                    .foregroundStyle(AppTheme.Colors.secondaryText)
                 Spacer()
                 Text(String(format: "%.3f", record.totalCost))
                     .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundColor(AppTheme.Colors.accent)
+                    .foregroundStyle(AppTheme.Colors.accent)
                 Text("元/米")
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                    .foregroundStyle(AppTheme.Colors.tertiaryText)
             }
         }
         .padding(.vertical, 4)
@@ -395,7 +397,7 @@ struct MiniCostBar: View {
                             .frame(width: 5, height: 5)
                         Text(segment.0)
                             .font(.system(size: 9))
-                            .foregroundColor(AppTheme.Colors.tertiaryText)
+                            .foregroundStyle(AppTheme.Colors.tertiaryText)
                     }
                 }
                 Spacer()

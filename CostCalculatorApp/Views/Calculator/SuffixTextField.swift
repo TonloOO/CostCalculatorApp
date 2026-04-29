@@ -20,14 +20,14 @@ struct SuffixTextField: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
             Text(label)
                 .font(AppTheme.Typography.caption1)
-                .foregroundColor(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
+                .foregroundStyle(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.secondaryText)
                 .animation(AppTheme.Animation.quick, value: isFocused)
             
             HStack(spacing: AppTheme.Spacing.xSmall) {
                 if let icon = icon {
                     Image(systemName: icon)
                         .font(.system(size: 16))
-                        .foregroundColor(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(isFocused ? AppTheme.Colors.primary : AppTheme.Colors.tertiaryText)
                         .frame(width: 24)
                 }
                 
@@ -35,7 +35,7 @@ struct SuffixTextField: View {
                     .keyboardType(keyboardType)
                     .focused($isFocused)
                     .font(AppTheme.Typography.body)
-                    .onChange(of: isFocused) { focused in
+                    .onChange(of: isFocused) { _, focused in
                         if focused {
                             HapticFeedbackManager.shared.selectionChanged()
                         }
@@ -44,7 +44,7 @@ struct SuffixTextField: View {
                 if !suffix.isEmpty {
                     Text(suffix)
                         .font(AppTheme.Typography.footnote)
-                        .foregroundColor(AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(AppTheme.Colors.tertiaryText)
                 }
             }
             .padding(AppTheme.Spacing.small)

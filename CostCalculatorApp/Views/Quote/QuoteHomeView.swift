@@ -50,13 +50,13 @@ struct QuoteHomeView: View {
                     Button(action: { showSettings = true }) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 18))
-                            .foregroundColor(AppTheme.Colors.primaryText)
+                            .foregroundStyle(AppTheme.Colors.primaryText)
                     }
 
                     Button(action: { authManager.logout() }) {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
                             .font(.system(size: 18))
-                            .foregroundColor(AppTheme.Colors.primaryText)
+                            .foregroundStyle(AppTheme.Colors.primaryText)
                     }
                 }
             }
@@ -73,13 +73,13 @@ struct QuoteHomeView: View {
             
             Text(isServerOnline ? "服务器已连接" : "服务器未连接")
                 .font(AppTheme.Typography.caption2)
-                .foregroundColor(isServerOnline ? AppTheme.Colors.success : AppTheme.Colors.error)
+                .foregroundStyle(isServerOnline ? AppTheme.Colors.success : AppTheme.Colors.error)
             
             Spacer()
             
             Text(apiService.baseURL)
                 .font(AppTheme.Typography.caption2)
-                .foregroundColor(AppTheme.Colors.tertiaryText)
+                .foregroundStyle(AppTheme.Colors.tertiaryText)
                 .lineLimit(1)
         }
         .padding(.horizontal, AppTheme.Spacing.medium)
@@ -102,7 +102,7 @@ struct APISettingsView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section(header: Text("API 服务器地址")) {
                     TextField("http://192.168.1.100:8000", text: $urlInput)
@@ -112,7 +112,7 @@ struct APISettingsView: View {
                     
                     Text("模拟器可使用 localhost，真机需使用局域网 IP")
                         .font(AppTheme.Typography.caption2)
-                        .foregroundColor(AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(AppTheme.Colors.tertiaryText)
                 }
                 
                 Section {
@@ -132,9 +132,9 @@ struct APISettingsView: View {
                     if let result = testResult {
                         HStack {
                             Image(systemName: result ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(result ? AppTheme.Colors.success : AppTheme.Colors.error)
+                                .foregroundStyle(result ? AppTheme.Colors.success : AppTheme.Colors.error)
                             Text(result ? "连接成功" : "连接失败")
-                                .foregroundColor(result ? AppTheme.Colors.success : AppTheme.Colors.error)
+                                .foregroundStyle(result ? AppTheme.Colors.success : AppTheme.Colors.error)
                         }
                     }
                 }
@@ -151,7 +151,7 @@ struct APISettingsView: View {
             .navigationTitle("API 设置")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("取消") { dismiss() }
                 }
             }

@@ -119,7 +119,7 @@ struct EditCalculationView: View {
                                     HStack {
                                         Text("经纱")
                                             .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(AppTheme.Colors.primaryText)
+                                            .foregroundStyle(AppTheme.Colors.primaryText)
                                         Spacer()
                                         Toggle("直接输入克重", isOn: $useDirectWarpWeight)
                                             .font(.system(size: 12))
@@ -154,7 +154,7 @@ struct EditCalculationView: View {
                                     HStack {
                                         Text("纬纱")
                                             .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(AppTheme.Colors.primaryText)
+                                            .foregroundStyle(AppTheme.Colors.primaryText)
                                         Spacer()
                                         Toggle("直接输入克重", isOn: $useDirectWeftWeight)
                                             .font(.system(size: 12))
@@ -271,11 +271,11 @@ struct EditCalculationView: View {
                     Text("更新计算")
                 }
                 .font(AppTheme.Typography.buttonText)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(AppTheme.Colors.primaryGradient)
-                .cornerRadius(AppTheme.CornerRadius.medium)
+                .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
                 .shadow(color: AppTheme.Colors.primary.opacity(0.4), radius: 8, x: 0, y: 4)
             }
             .padding(.horizontal, AppTheme.Spacing.large)

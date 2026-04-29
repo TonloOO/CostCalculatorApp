@@ -26,7 +26,7 @@ struct ProfileView: View {
                     .padding(.bottom, 100)
                 }
             }
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
         }
         .id(languageManager.currentLanguage.rawValue)
         .sheet(isPresented: $showingSettings) { AppSettingsView() }
@@ -58,11 +58,11 @@ struct ProfileView: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
             Text("settings".localized())
                 .font(AppTheme.Typography.largeTitle)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
 
             Text("管理应用与 AI 配置")
                 .font(AppTheme.Typography.subheadline)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, AppTheme.Spacing.large)
@@ -156,10 +156,10 @@ struct ProfileView: View {
         HStack(spacing: AppTheme.Spacing.xSmall) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(AppTheme.Colors.primary)
+                .foregroundStyle(AppTheme.Colors.primary)
             Text(title)
                 .font(AppTheme.Typography.headline)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
         }
         .padding(.horizontal, AppTheme.Spacing.medium)
         .padding(.top, AppTheme.Spacing.medium)
@@ -172,10 +172,10 @@ struct ProfileView: View {
         VStack(spacing: 4) {
             Text("cost_calculator".localized())
                 .font(AppTheme.Typography.caption1)
-                .foregroundColor(AppTheme.Colors.tertiaryText)
+                .foregroundStyle(AppTheme.Colors.tertiaryText)
             Text("version".localized())
                 .font(AppTheme.Typography.caption2)
-                .foregroundColor(AppTheme.Colors.tertiaryText.opacity(0.7))
+                .foregroundStyle(AppTheme.Colors.tertiaryText.opacity(0.7))
         }
         .padding(.top, AppTheme.Spacing.medium)
     }
@@ -195,7 +195,7 @@ struct ThemedSettingsRow: View {
             HStack(spacing: AppTheme.Spacing.small) {
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .frame(width: 32, height: 32)
                     .background(iconColor)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -204,10 +204,10 @@ struct ThemedSettingsRow: View {
                     Text(title)
                         .font(AppTheme.Typography.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
                     Text(subtitle)
                         .font(AppTheme.Typography.caption1)
-                        .foregroundColor(AppTheme.Colors.secondaryText)
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
                         .lineLimit(1)
                 }
 
@@ -215,7 +215,7 @@ struct ThemedSettingsRow: View {
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                    .foregroundStyle(AppTheme.Colors.tertiaryText)
             }
             .padding(.horizontal, AppTheme.Spacing.medium)
             .padding(.vertical, AppTheme.Spacing.small)
@@ -232,7 +232,7 @@ struct CloudKitThemedRow: View {
             HStack(spacing: AppTheme.Spacing.small) {
                 Image(systemName: "icloud")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .frame(width: 32, height: 32)
                     .background(AppTheme.Colors.info)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -241,14 +241,14 @@ struct CloudKitThemedRow: View {
                     Text("data_sync".localized())
                         .font(AppTheme.Typography.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
                     HStack(spacing: 6) {
                         Circle()
                             .fill(cloudKitSettings.cloudKitStatusColor)
                             .frame(width: 7, height: 7)
                         Text(cloudKitSettings.cloudKitStatus)
                             .font(AppTheme.Typography.caption1)
-                            .foregroundColor(AppTheme.Colors.secondaryText)
+                            .foregroundStyle(AppTheme.Colors.secondaryText)
                     }
                 }
 
@@ -256,7 +256,7 @@ struct CloudKitThemedRow: View {
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                    .foregroundStyle(AppTheme.Colors.tertiaryText)
             }
             .padding(.horizontal, AppTheme.Spacing.medium)
             .padding(.vertical, AppTheme.Spacing.small)
@@ -277,7 +277,7 @@ struct AISettingsView: View {
     @State private var showVisionModelPicker = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 AppTheme.Colors.groupedBackground.ignoresSafeArea()
 
@@ -289,17 +289,17 @@ struct AISettingsView: View {
                                 .foregroundStyle(AppTheme.Colors.primaryGradient)
                             Text("AI 设置")
                                 .font(AppTheme.Typography.title2)
-                                .foregroundColor(AppTheme.Colors.primaryText)
+                                .foregroundStyle(AppTheme.Colors.primaryText)
                             Text("配置 AI 模型 API 服务")
                                 .font(AppTheme.Typography.subheadline)
-                                .foregroundColor(AppTheme.Colors.secondaryText)
+                                .foregroundStyle(AppTheme.Colors.secondaryText)
                         }
                         .padding(.top, AppTheme.Spacing.xxLarge)
 
                         VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                             Text("API Base URL")
                                 .font(AppTheme.Typography.headline)
-                                .foregroundColor(AppTheme.Colors.primaryText)
+                                .foregroundStyle(AppTheme.Colors.primaryText)
 
                             TextField("https://api.example.com", text: $baseURL)
                                 .font(AppTheme.Typography.body)
@@ -314,7 +314,7 @@ struct AISettingsView: View {
 
                             Text("API Key")
                                 .font(AppTheme.Typography.headline)
-                                .foregroundColor(AppTheme.Colors.primaryText)
+                                .foregroundStyle(AppTheme.Colors.primaryText)
 
                             HStack {
                                 Group {
@@ -333,7 +333,7 @@ struct AISettingsView: View {
                                     showAPIKey.toggle()
                                 } label: {
                                     Image(systemName: showAPIKey ? "eye.slash" : "eye")
-                                        .foregroundColor(AppTheme.Colors.secondaryText)
+                                        .foregroundStyle(AppTheme.Colors.secondaryText)
                                 }
                             }
                             .padding(AppTheme.Spacing.small)
@@ -354,7 +354,7 @@ struct AISettingsView: View {
                         } label: {
                             Text("保存设置")
                                 .font(AppTheme.Typography.buttonText)
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, AppTheme.Spacing.small)
                                 .background(AppTheme.Colors.primaryGradient)
@@ -367,12 +367,12 @@ struct AISettingsView: View {
             .navigationTitle("AI 设置")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("完成") {
                         saveSettings()
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.Colors.primary)
+                    .foregroundStyle(AppTheme.Colors.primary)
                 }
             }
         }
@@ -404,7 +404,7 @@ struct AISettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("模型配置")
                 .font(AppTheme.Typography.headline)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
                 .padding(.bottom, AppTheme.Spacing.small)
 
             modelRow(
@@ -436,7 +436,7 @@ struct AISettingsView: View {
             HStack(spacing: AppTheme.Spacing.small) {
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .frame(width: 32, height: 32)
                     .background(AppTheme.Colors.primaryGradient)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -444,10 +444,10 @@ struct AISettingsView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
                         .font(AppTheme.Typography.subheadline)
-                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
                     Text(value)
                         .font(AppTheme.Typography.caption1)
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                         .lineLimit(1)
                 }
 
@@ -455,7 +455,7 @@ struct AISettingsView: View {
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                    .foregroundStyle(AppTheme.Colors.tertiaryText)
             }
             .padding(.vertical, AppTheme.Spacing.small)
         }
@@ -491,7 +491,7 @@ struct ModelPickerSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 AppTheme.Colors.groupedBackground.ignoresSafeArea()
 
@@ -499,7 +499,7 @@ struct ModelPickerSheet: View {
                     HStack(spacing: AppTheme.Spacing.xSmall) {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 14))
-                            .foregroundColor(AppTheme.Colors.tertiaryText)
+                            .foregroundStyle(AppTheme.Colors.tertiaryText)
                         TextField("搜索模型...", text: $searchText)
                             .font(AppTheme.Typography.body)
                             .textFieldStyle(.plain)
@@ -511,7 +511,7 @@ struct ModelPickerSheet: View {
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .font(.system(size: 14))
-                                    .foregroundColor(AppTheme.Colors.tertiaryText)
+                                    .foregroundStyle(AppTheme.Colors.tertiaryText)
                             }
                         }
                     }
@@ -531,14 +531,14 @@ struct ModelPickerSheet: View {
                         VStack(spacing: AppTheme.Spacing.medium) {
                             Image(systemName: "exclamationmark.triangle")
                                 .font(.system(size: 36))
-                                .foregroundColor(AppTheme.Colors.warning)
+                                .foregroundStyle(AppTheme.Colors.warning)
                             Text(error)
                                 .font(AppTheme.Typography.subheadline)
-                                .foregroundColor(AppTheme.Colors.secondaryText)
+                                .foregroundStyle(AppTheme.Colors.secondaryText)
                                 .multilineTextAlignment(.center)
                             Button("重试") { fetchModels() }
                                 .font(AppTheme.Typography.buttonText)
-                                .foregroundColor(AppTheme.Colors.primary)
+                                .foregroundStyle(AppTheme.Colors.primary)
                         }
                         .padding()
                         Spacer()
@@ -547,10 +547,10 @@ struct ModelPickerSheet: View {
                         VStack(spacing: AppTheme.Spacing.small) {
                             Image(systemName: "magnifyingglass")
                                 .font(.system(size: 28))
-                                .foregroundColor(AppTheme.Colors.tertiaryText)
+                                .foregroundStyle(AppTheme.Colors.tertiaryText)
                             Text("未找到匹配的模型")
                                 .font(AppTheme.Typography.subheadline)
-                                .foregroundColor(AppTheme.Colors.secondaryText)
+                                .foregroundStyle(AppTheme.Colors.secondaryText)
                         }
                         Spacer()
                     } else {
@@ -563,14 +563,14 @@ struct ModelPickerSheet: View {
                                     HStack {
                                         Text(model)
                                             .font(AppTheme.Typography.body)
-                                            .foregroundColor(AppTheme.Colors.primaryText)
+                                            .foregroundStyle(AppTheme.Colors.primaryText)
 
                                         Spacer()
 
                                         if model == selectedModel {
                                             Image(systemName: "checkmark.circle.fill")
                                                 .font(.system(size: 18))
-                                                .foregroundColor(AppTheme.Colors.primary)
+                                                .foregroundStyle(AppTheme.Colors.primary)
                                         }
                                     }
                                     .contentShape(Rectangle())
@@ -589,11 +589,11 @@ struct ModelPickerSheet: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("取消") { dismiss() }
-                        .foregroundColor(AppTheme.Colors.secondaryText)
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         fetchModels()
                     } label: {
@@ -601,7 +601,7 @@ struct ModelPickerSheet: View {
                             .font(.system(size: 14, weight: .medium))
                     }
                     .disabled(isLoading)
-                    .foregroundColor(AppTheme.Colors.primary)
+                    .foregroundStyle(AppTheme.Colors.primary)
                 }
             }
         }
@@ -632,22 +632,22 @@ struct AppSettingsView: View {
     @State private var languageChanged = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack {
                 Text("app_settings".localized())
                     .font(AppTheme.Typography.title2)
                     .padding()
                 Text("settings_under_development".localized())
-                    .foregroundColor(AppTheme.Colors.secondaryText)
+                    .foregroundStyle(AppTheme.Colors.secondaryText)
                 Spacer()
             }
             .background(AppTheme.Colors.groupedBackground)
             .navigationTitle("settings".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("done".localized()) { dismiss() }
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                 }
             }
         }
@@ -666,7 +666,7 @@ struct AboutView: View {
     @State private var languageChanged = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 AppTheme.Colors.groupedBackground.ignoresSafeArea()
                 VStack(spacing: AppTheme.Spacing.large) {
@@ -679,7 +679,7 @@ struct AboutView: View {
 
                     Text("version".localized())
                         .font(AppTheme.Typography.subheadline)
-                        .foregroundColor(AppTheme.Colors.secondaryText)
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
 
                     VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
                         Text("features".localized())
@@ -700,16 +700,16 @@ struct AboutView: View {
 
                     Text("copyright".localized())
                         .font(AppTheme.Typography.caption2)
-                        .foregroundColor(AppTheme.Colors.tertiaryText)
+                        .foregroundStyle(AppTheme.Colors.tertiaryText)
                 }
                 .padding(.top, AppTheme.Spacing.xxLarge)
             }
             .navigationTitle("about".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("done".localized()) { dismiss() }
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                 }
             }
         }
@@ -729,7 +729,7 @@ struct CloudKitSettingsView: View {
     @State private var languageChanged = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 AppTheme.Colors.groupedBackground.ignoresSafeArea()
 
@@ -748,7 +748,7 @@ struct CloudKitSettingsView: View {
                                 .frame(width: 10, height: 10)
                             Text(cloudKitSettings.cloudKitStatus)
                                 .font(AppTheme.Typography.headline)
-                                .foregroundColor(cloudKitSettings.cloudKitStatusColor)
+                                .foregroundStyle(cloudKitSettings.cloudKitStatusColor)
                         }
                     }
                     .padding(.top, AppTheme.Spacing.xxxLarge)
@@ -764,7 +764,7 @@ struct CloudKitSettingsView: View {
                                             .fontWeight(.medium)
                                         Text("icloud_description".localized())
                                             .font(AppTheme.Typography.caption1)
-                                            .foregroundColor(AppTheme.Colors.secondaryText)
+                                            .foregroundStyle(AppTheme.Colors.secondaryText)
                                     }
                                     Spacer()
                                     Toggle("", isOn: $cloudKitSettings.isCloudKitEnabled)
@@ -780,13 +780,13 @@ struct CloudKitSettingsView: View {
                                         .fontWeight(.medium)
                                     Text("icloud_note1".localized())
                                         .font(AppTheme.Typography.caption1)
-                                        .foregroundColor(AppTheme.Colors.secondaryText)
+                                        .foregroundStyle(AppTheme.Colors.secondaryText)
                                     Text("icloud_note2".localized())
                                         .font(AppTheme.Typography.caption1)
-                                        .foregroundColor(AppTheme.Colors.secondaryText)
+                                        .foregroundStyle(AppTheme.Colors.secondaryText)
                                     Text("icloud_note3".localized())
                                         .font(AppTheme.Typography.caption1)
-                                        .foregroundColor(AppTheme.Colors.warning)
+                                        .foregroundStyle(AppTheme.Colors.warning)
                                 }
                             }
                             .padding(AppTheme.Spacing.medium)
@@ -794,20 +794,20 @@ struct CloudKitSettingsView: View {
                             VStack(spacing: AppTheme.Spacing.medium) {
                                 Image(systemName: "exclamationmark.triangle")
                                     .font(.system(size: 36))
-                                    .foregroundColor(AppTheme.Colors.warning)
+                                    .foregroundStyle(AppTheme.Colors.warning)
                                 Text("icloud_unavailable".localized())
                                     .font(AppTheme.Typography.headline)
-                                    .foregroundColor(AppTheme.Colors.warning)
+                                    .foregroundStyle(AppTheme.Colors.warning)
                                 Text("icloud_login_required".localized())
                                     .font(AppTheme.Typography.caption1)
-                                    .foregroundColor(AppTheme.Colors.secondaryText)
+                                    .foregroundStyle(AppTheme.Colors.secondaryText)
                                     .multilineTextAlignment(.center)
                                 Button("open_settings".localized()) {
                                     if let url = URL(string: UIApplication.openSettingsURLString) {
                                         UIApplication.shared.open(url)
                                     }
                                 }
-                                .foregroundColor(AppTheme.Colors.primary)
+                                .foregroundStyle(AppTheme.Colors.primary)
                             }
                             .padding(AppTheme.Spacing.medium)
                         }
@@ -823,9 +823,9 @@ struct CloudKitSettingsView: View {
             .navigationTitle("data_sync".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("done".localized()) { dismiss() }
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                 }
             }
         }
@@ -844,7 +844,7 @@ struct LanguageSettingsView: View {
     @ObservedObject private var languageManager = LanguageManager.shared
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 AppTheme.Colors.groupedBackground.ignoresSafeArea()
 
@@ -857,7 +857,7 @@ struct LanguageSettingsView: View {
                             .font(AppTheme.Typography.title2)
                         Text("language_subtitle".localized())
                             .font(AppTheme.Typography.subheadline)
-                            .foregroundColor(AppTheme.Colors.secondaryText)
+                            .foregroundStyle(AppTheme.Colors.secondaryText)
                             .multilineTextAlignment(.center)
                     }
                     .padding(.top, AppTheme.Spacing.xxxLarge)
@@ -869,12 +869,12 @@ struct LanguageSettingsView: View {
                                 Text(language.displayName)
                                     .font(AppTheme.Typography.subheadline)
                                     .fontWeight(.medium)
-                                    .foregroundColor(AppTheme.Colors.primaryText)
+                                    .foregroundStyle(AppTheme.Colors.primaryText)
                                 Spacer()
                                 if languageManager.currentLanguage == language {
                                     Image(systemName: "checkmark")
                                         .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(AppTheme.Colors.primary)
+                                        .foregroundStyle(AppTheme.Colors.primary)
                                 }
                             }
                             .padding(.horizontal, AppTheme.Spacing.medium)
@@ -898,9 +898,9 @@ struct LanguageSettingsView: View {
             .navigationTitle("language".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("back".localized()) { dismiss() }
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .foregroundStyle(AppTheme.Colors.primary)
                 }
             }
         }
@@ -908,8 +908,6 @@ struct LanguageSettingsView: View {
     }
 }
 
-struct ProfileView_Previews: PreviewProvider {
-    static var previews: some View {
-        ProfileView()
-    }
+#Preview {
+    ProfileView()
 }

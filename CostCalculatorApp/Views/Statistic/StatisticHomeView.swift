@@ -16,7 +16,7 @@ struct StatisticHomeView: View {
     private var records: FetchedResults<CalculationRecord>
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 // Background
                 AppTheme.Colors.groupedBackground
@@ -28,11 +28,11 @@ struct StatisticHomeView: View {
                         VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
                             Text("统计分析")
                                 .font(AppTheme.Typography.largeTitle)
-                                .foregroundColor(AppTheme.Colors.primaryText)
+                                .foregroundStyle(AppTheme.Colors.primaryText)
                             
                             Text("查看您的计算数据统计")
                                 .font(AppTheme.Typography.subheadline)
-                                .foregroundColor(AppTheme.Colors.secondaryText)
+                                .foregroundStyle(AppTheme.Colors.secondaryText)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, AppTheme.Spacing.large)
@@ -42,7 +42,7 @@ struct StatisticHomeView: View {
                         VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                             Text("快速统计")
                                 .font(AppTheme.Typography.headline)
-                                .foregroundColor(AppTheme.Colors.primaryText)
+                                .foregroundStyle(AppTheme.Colors.primaryText)
                                 .padding(.horizontal, AppTheme.Spacing.large)
                             
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -83,7 +83,7 @@ struct StatisticHomeView: View {
                         VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                             Text("月度统计")
                                 .font(AppTheme.Typography.headline)
-                                .foregroundColor(AppTheme.Colors.primaryText)
+                                .foregroundStyle(AppTheme.Colors.primaryText)
                                 .padding(.horizontal, AppTheme.Spacing.large)
                             
                             VStack(spacing: AppTheme.Spacing.small) {
@@ -112,7 +112,7 @@ struct StatisticHomeView: View {
                         VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                             Text("材料使用统计")
                                 .font(AppTheme.Typography.headline)
-                                .foregroundColor(AppTheme.Colors.primaryText)
+                                .foregroundStyle(AppTheme.Colors.primaryText)
                                 .padding(.horizontal, AppTheme.Spacing.large)
                             
                             VStack(spacing: AppTheme.Spacing.small) {
@@ -141,7 +141,7 @@ struct StatisticHomeView: View {
                         VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                             Text("成本构成")
                                 .font(AppTheme.Typography.headline)
-                                .foregroundColor(AppTheme.Colors.primaryText)
+                                .foregroundStyle(AppTheme.Colors.primaryText)
                                 .padding(.horizontal, AppTheme.Spacing.large)
                             
                             VStack(spacing: AppTheme.Spacing.small) {
@@ -175,7 +175,7 @@ struct StatisticHomeView: View {
                     .padding(.bottom, 100)
                 }
             }
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
     
@@ -282,29 +282,27 @@ struct StatisticRow: View {
         HStack {
             Image(systemName: icon)
                 .font(.system(size: 20))
-                .foregroundColor(AppTheme.Colors.primary)
+                .foregroundStyle(AppTheme.Colors.primary)
                 .frame(width: 30)
             
             Text(title)
                 .font(AppTheme.Typography.body)
-                .foregroundColor(AppTheme.Colors.secondaryText)
+                .foregroundStyle(AppTheme.Colors.secondaryText)
             
             Spacer()
             
             Text(value)
                 .font(AppTheme.Typography.headline)
-                .foregroundColor(AppTheme.Colors.primaryText)
+                .foregroundStyle(AppTheme.Colors.primaryText)
         }
         .padding(AppTheme.Spacing.medium)
         .background(AppTheme.Colors.background)
-        .cornerRadius(AppTheme.CornerRadius.medium)
+        .clipShape(.rect(cornerRadius: AppTheme.CornerRadius.medium))
         .shadow(color: AppTheme.Colors.shadow, radius: 2, x: 0, y: 1)
     }
 }
 
-struct StatisticHomeView_Previews: PreviewProvider {
-    static var previews: some View {
-        StatisticHomeView()
-            .environment(\.managedObjectContext, PersistenceController.shared.container.viewContext)
-    }
+#Preview {
+    StatisticHomeView()
+        .environment(\.managedObjectContext, PersistenceController.shared.container.viewContext)
 }
