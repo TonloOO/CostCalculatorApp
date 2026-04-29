@@ -94,14 +94,10 @@ JSON 格式：
 
     // MARK: - Vision Image Recognition
 
-    func recognizeTextile(
-        image: UIImage,
-        onComplete: @escaping (Result<TextileRecognitionResult, Error>) -> Void
-    ) {
+    func recognizeTextile(image: UIImage) async throws -> TextileRecognitionResult {
         let resized = resizeImage(image, maxDimension: 1024)
         guard let jpegData = resized.jpegData(compressionQuality: 0.8) else {
-            onComplete(.failure(ChatError.imageEncodingFailed))
-            return
+            throw ChatError.imageEncodingFailed
         }
         let base64 = jpegData.base64EncodedString()
 
@@ -119,23 +115,15 @@ JSON 格式：
             max_tokens: 2000
         )
 
-        performNonStreamRequest(request: request) { result in
-            switch result {
-            case .success(let text):
-                do {
-                    let cleaned = Self.extractJSON(from: text)
-                    guard let data = cleaned.data(using: .utf8) else {
-                        onComplete(.failure(ChatError.invalidResponse))
-                        return
-                    }
-                    let recognition = try JSONDecoder().decode(TextileRecognitionResult.self, from: data)
-                    onComplete(.success(recognition))
-                } catch {
-                    onComplete(.failure(ChatError.jsonParseFailed(text)))
-                }
-            case .failure(let error):
-                onComplete(.failure(error))
-            }
+        let text = try await performNonStreamRequest(request: request)
+        let cleaned = Self.extractJSON(from: text)
+        guard let data = cleaned.data(using: .utf8) else {
+            throw ChatError.invalidResponse
+        }
+        do {
+            return try JSONDecoder().decode(TextileRecognitionResult.self, from: data)
+        } catch {
+            throw ChatError.jsonParseFailed(text)
         }
     }
 
@@ -189,18 +177,16 @@ JSON 格式：
         }
     }
 
-    private func performNonStreamRequest(
-        request: LLMChatRequest,
-        completion: @escaping (Result<String, Error>) -> Void
-    ) {
+    private func performNonStreamRequest(request: LLMChatRequest) async throws -> String {
         guard let url = URL(string: "\(baseURL)/v1/chat/completions") else {
-            completion(.failure(ChatError.invalidURL))
-            return
+            throw ChatError.invalidURL
         }
 
-        guard let body = try? JSONEncoder().encode(request) else {
-            completion(.failure(ChatError.encodingFailed))
-            return
+        let body: Data
+        do {
+            body = try JSONEncoder().encode(request)
+        } catch {
+            throw ChatError.encodingFailed
         }
 
         var urlRequest = URLRequest(url: url)
@@ -210,32 +196,15 @@ JSON 格式：
         urlRequest.httpBody = body
         urlRequest.timeoutInterval = 60
 
-        URLSession.shared.dataTask(with: urlRequest) { data, response, error in
-            if let error = error {
-                DispatchQueue.main.async { completion(.failure(error)) }
-                return
-            }
-            guard let data = data else {
-                DispatchQueue.main.async { completion(.failure(ChatError.invalidResponse)) }
-                return
-            }
-            do {
-                let apiResponse = try JSONDecoder().decode(LLMChatResponse.self, from: data)
-                if let errorInfo = apiResponse.error {
-                    DispatchQueue.main.async {
-                        completion(.failure(ChatError.apiError(0, errorInfo.message ?? "Unknown error")))
-                    }
-                    return
-                }
-                if let content = apiResponse.choices?.first?.message?.content {
-                    DispatchQueue.main.async { completion(.success(content)) }
-                } else {
-                    DispatchQueue.main.async { completion(.failure(ChatError.invalidResponse)) }
-                }
-            } catch {
-                DispatchQueue.main.async { completion(.failure(error)) }
-            }
-        }.resume()
+        let (data, _) = try await URLSession.shared.data(for: urlRequest)
+        let apiResponse = try JSONDecoder().decode(LLMChatResponse.self, from: data)
+        if let errorInfo = apiResponse.error {
+            throw ChatError.apiError(0, errorInfo.message ?? "Unknown error")
+        }
+        guard let content = apiResponse.choices?.first?.message?.content else {
+            throw ChatError.invalidResponse
+        }
+        return content
     }
 
     private func resizeImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
@@ -274,10 +243,9 @@ JSON 格式：
         let owned_by: String?
     }
 
-    func fetchModels(completion: @escaping (Result<[String], Error>) -> Void) {
+    func fetchModels() async throws -> [String] {
         guard let url = URL(string: "\(baseURL)/v1/models") else {
-            completion(.failure(ChatError.invalidURL))
-            return
+            throw ChatError.invalidURL
         }
 
         var request = URLRequest(url: url)
@@ -285,26 +253,12 @@ JSON 格式：
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 15
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                DispatchQueue.main.async { completion(.failure(error)) }
-                return
-            }
-            guard let data = data else {
-                DispatchQueue.main.async { completion(.failure(ChatError.invalidResponse)) }
-                return
-            }
-            do {
-                let modelsResponse = try JSONDecoder().decode(ModelsResponse.self, from: data)
-                let modelIDs = modelsResponse.data
-                    .map(\.id)
-                    .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                    .sorted()
-                DispatchQueue.main.async { completion(.success(modelIDs)) }
-            } catch {
-                DispatchQueue.main.async { completion(.failure(error)) }
-            }
-        }.resume()
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let modelsResponse = try JSONDecoder().decode(ModelsResponse.self, from: data)
+        return modelsResponse.data
+            .map(\.id)
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .sorted()
     }
 
     // MARK: - Error Types

@@ -613,12 +613,11 @@ struct ModelPickerSheet: View {
     private func fetchModels() {
         isLoading = true
         errorMessage = nil
-        LLMChatService.shared.fetchModels { result in
-            isLoading = false
-            switch result {
-            case .success(let fetchedModels):
-                models = fetchedModels
-            case .failure(let error):
+        Task { @MainActor in
+            defer { isLoading = false }
+            do {
+                models = try await LLMChatService.shared.fetchModels()
+            } catch {
                 errorMessage = error.localizedDescription
             }
         }

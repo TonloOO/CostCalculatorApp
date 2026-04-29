@@ -166,40 +166,40 @@ final class ChatViewModel {
         messages.append(processingMsg)
         requestScrollToBottom()
 
-        chatService.recognizeTextile(image: image) { [weak self] result in
-            Task { @MainActor in
-                guard let self = self else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let recognition = try await chatService.recognizeTextile(image: image)
                 self.messages.removeLast()
                 self.isRecognizing = false
 
-                switch result {
-                case .success(let recognition):
-                    let cardMessage = ChatDisplayMessage(
-                        text: "识别完成",
-                        role: .assistant,
-                        recognitionResult: recognition,
-                        isRecognitionCard: true
-                    )
-                    self.messages.append(cardMessage)
-                    self.saveMessage(cardMessage)
-                    self.requestScrollToBottom()
+                let cardMessage = ChatDisplayMessage(
+                    text: "识别完成",
+                    role: .assistant,
+                    recognitionResult: recognition,
+                    isRecognitionCard: true
+                )
+                self.messages.append(cardMessage)
+                self.saveMessage(cardMessage)
+                self.requestScrollToBottom()
 
-                    if !userText.isEmpty {
-                        self.streamTextResponse()
-                    } else {
-                        self.isSending = false
-                    }
-
-                case .failure(let error):
-                    let errorMsg = ChatDisplayMessage(
-                        text: "识别失败: \(error.localizedDescription)",
-                        role: .assistant
-                    )
-                    self.messages.append(errorMsg)
-                    self.saveMessage(errorMsg)
-                    self.requestScrollToBottom()
+                if !userText.isEmpty {
+                    self.streamTextResponse()
+                } else {
                     self.isSending = false
                 }
+            } catch {
+                self.messages.removeLast()
+                self.isRecognizing = false
+
+                let errorMsg = ChatDisplayMessage(
+                    text: "识别失败: \(error.localizedDescription)",
+                    role: .assistant
+                )
+                self.messages.append(errorMsg)
+                self.saveMessage(errorMsg)
+                self.requestScrollToBottom()
+                self.isSending = false
             }
         }
     }
