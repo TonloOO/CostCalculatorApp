@@ -7,59 +7,39 @@
 
 import SwiftUI
 
-enum Tab: String, CaseIterable {
-    case home = "house.circle"
-    case chat = "message.circle"
-    case statistic = "chart.bar"
-    case setting = "gearshape"
+enum AppTab: Hashable {
+    case home
+    case chat
+    case statistic
+    case setting
 }
 
 struct ContentView: View {
-    @State private var selectedTab: Tab = .home
+    @State private var selectedTab: AppTab = .home
     @ObservedObject private var languageManager = LanguageManager.shared
-    
+
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Background gradient
-            LinearGradient(
-                colors: [AppTheme.Colors.background, AppTheme.Colors.secondaryBackground],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            
-            // Main content area
-            TabView(selection: $selectedTab) {
+        TabView(selection: $selectedTab) {
+            Tab("tab_home".localized(), systemImage: "house.circle", value: .home) {
                 HomeView()
-                    .tag(Tab.home)
-                
-                ChatView()
-                    .tag(Tab.chat)
-                
-                StatisticHomeView()
-                    .tag(Tab.statistic)
-                
-                ProfileView()
-                    .tag(Tab.setting)
             }
-            
-            // Custom bottom navigation bar
-            CustomTabBar(selectedTab: $selectedTab)
+
+            Tab("tab_chat".localized(), systemImage: "message.circle", value: .chat) {
+                ChatView()
+            }
+
+            Tab("tab_statistics".localized(), systemImage: "chart.bar", value: .statistic) {
+                StatisticHomeView()
+            }
+
+            Tab("tab_settings".localized(), systemImage: "gearshape", value: .setting) {
+                ProfileView()
+            }
         }
-        .ignoresSafeArea(.keyboard)
         .id(languageManager.currentLanguage.rawValue)
     }
 }
 
-// Legacy BottomNavigationBar - replaced with CustomTabBar from CustomComponents
-
-
-
-
-
-
 #Preview {
     ContentView()
 }
-
-
