@@ -210,7 +210,7 @@ struct CalculationDetailView: View {
                     .padding(.vertical, 10)
                     .background(
                         Capsule()
-                            .fill(message.contains("成功") ? Color(hex: "4CAF50") : Color(hex: "F44336"))
+                            .fill(message.contains("成功") ? AppTheme.Colors.success : AppTheme.Colors.error)
                     )
                     .shadow(radius: 4)
                     .padding(.top, 8)

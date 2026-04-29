@@ -310,14 +310,14 @@ struct HistoryRecordRow: View {
                 // Material type badge
                 Text(materialType)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(isSingleMaterial ? AppTheme.Colors.primary : Color(hex: "FF6B6B"))
+                    .foregroundStyle(isSingleMaterial ? AppTheme.Colors.primary : AppTheme.Colors.accent)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(
                         Capsule().fill(
                             isSingleMaterial
                             ? AppTheme.Colors.primary.opacity(0.1)
-                            : Color(hex: "FF6B6B").opacity(0.1)
+                            : AppTheme.Colors.accent.opacity(0.1)
                         )
                     )
             }
@@ -363,10 +363,10 @@ struct MiniCostBar: View {
     
     private var segments: [(String, Double, Color)] {
         [
-            ("经纱", warpCost, Color(hex: "5B67CA")),
-            ("纬纱", weftCost, Color(hex: "FF6B6B")),
-            ("工费", laborCost, Color(hex: "FFC107")),
-            ("牵经", warpingCost, Color(hex: "43E97B")),
+            ("经纱", warpCost, AppTheme.Colors.primary),
+            ("纬纱", weftCost, AppTheme.Colors.accent),
+            ("工费", laborCost, AppTheme.Colors.warning),
+            ("牵经", warpingCost, AppTheme.Colors.success),
         ].filter { $0.1 > 0 }
     }
     
