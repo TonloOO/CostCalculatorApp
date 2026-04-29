@@ -82,7 +82,7 @@ struct CostCalculatorView: View {
     @State private var constants: CalculationConstants = CalculationConstants.defaultConstants
 
     // Calculation results
-    @StateObject private var calculationResults = CalculationResults()
+    @State private var calculationResults = CalculationResults()
 
     // Active sheet management
     @State private var activeSheet: ActiveSheet?
@@ -370,27 +370,7 @@ struct CostCalculatorView: View {
     }
 
     
-    let parameterSynonyms: [String: [String]] = [
-        "筘号": ["筘号", "k号", "筘", "k"],
-        "经纱纱价": ["经纱价", "经纱纱价", "经纱价格", "经价", "经纱"],
-        "纬纱纱价": ["纬纱价", "纬纱纱价", "纬纱价格", "纬价", "纬纱"],
-        "车速": ["车速", "速度"],
-        "效率": ["效率"],
-        "门幅": ["门幅", "幅宽"],
-        "穿入": ["穿入", "穿综"],
-        "织缩": ["织缩", "缩率"],
-        "下机纬密": ["下机纬密", "纬密"],
-        "日工费": ["日工费", "工费"],
-        "牵经费用": ["牵经费用", "牵经费"],
-        "经纱规格": ["经纱规格", "经纱支数", "经纱D数"],
-        "经纱类型": ["经纱类型"],
-        "纬纱规格": ["纬纱规格", "纬纱支数", "纬纱D数"],
-        "纬纱类型": ["纬纱类型"],
-        "客户名称": ["客户名称", "客户", "名称"],
-    ]
-
-    
-    var parameterMappings: [String: (String) -> Void] {
+    private var parameterMappings: [String: (String) -> Void] {
         return [
             "客户名称": { self.customerName = $0 },
             "筘号": { self.boxNumber = $0 },
@@ -410,97 +390,16 @@ struct CostCalculatorView: View {
             "纬纱类型": { self.weftYarnTypeSelection = YarnType(rawValue: $0) ?? .dNumber },
         ]
     }
-    
-    func extractParameters(from text: String) -> [String: String] {
-        var extractedParameters = [String: String]()
 
-        // Remove spaces for easier processing
-        let cleanedText = text.replacingOccurrences(of: " ", with: "")
-        // Tokenize the text into possible key-value pairs
-        let components = cleanedText.components(separatedBy: CharacterSet(charactersIn: ",;，；"))
-
-        for component in components {
-            for (parameterKey, synonyms) in parameterSynonyms {
-                for synonym in synonyms {
-                    if component.contains(synonym) {
-                        if let value = extractValue(after: synonym, in: component) {
-                            extractedParameters[parameterKey] = value
-                            break
-                        }
-                    }
-                }
-            }
-        }
-
-        return extractedParameters
-    }
-
-    func extractValue(after keyword: String, in text: String) -> String? {
-        // Find the range of the keyword
-        if let keywordRange = text.range(of: keyword) {
-            var valueStartIndex = keywordRange.upperBound
-
-            // Possible separators
-            let possibleSeparators = [":", "：", "=", "-"]
-            if valueStartIndex < text.endIndex {
-                let nextChar = text[valueStartIndex]
-                if possibleSeparators.contains(String(nextChar)) {
-                    valueStartIndex = text.index(after: valueStartIndex)
-                }
-            }
-
-            // Extract the value until the next parameter or end of string
-            let remainingText = text[valueStartIndex...]
-            // Look for the next parameter synonym to avoid capturing too much
-            var valueEndIndex = text.endIndex
-            for (_, synonyms) in parameterSynonyms {
-                for synonym in synonyms {
-                    if let range = remainingText.range(of: synonym) {
-                        if range.lowerBound != remainingText.startIndex {
-                            valueEndIndex = text.index(valueStartIndex, offsetBy: range.lowerBound.utf16Offset(in: remainingText))
-                            break
-                        }
-                    }
-                }
-            }
-
-            let valueRange = valueStartIndex..<valueEndIndex
-            let value = String(text[valueRange]).trimmingCharacters(in: CharacterSet(charactersIn: ":：=-"))
-            return value
-        }
-        return nil
-    }
-
-    
-    func checkClipboardForParameters() {
-        if let clipboardString = UIPasteboard.general.string {
-            if containsParameters(in: clipboardString) {
-                // Show an alert to the user
-                showClipboardImportAlert(content: clipboardString)
-            }
-        }
-    }
-    
-    func containsParameters(in content: String) -> Bool {
-        for (_, synonyms) in parameterSynonyms {
-            for synonym in synonyms {
-                if content.contains(synonym) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    
-    func showClipboardImportAlert(content: String) {
-        clipboardContentToImport = content
+    private func checkClipboardForParameters() {
+        guard let clipboardString = UIPasteboard.general.string,
+              ClipboardParameterParser.containsParameters(in: clipboardString) else { return }
+        clipboardContentToImport = clipboardString
         activeAlert = .clipboardContentImport
     }
-    
-    func parseClipboardContent(_ content: String) {
-        let extractedParameters = extractParameters(from: content)
 
+    private func parseClipboardContent(_ content: String) {
+        let extractedParameters = ClipboardParameterParser.extractParameters(from: content)
         for (parameter, value) in extractedParameters {
             if let setter = parameterMappings[parameter] {
                 setter(value)

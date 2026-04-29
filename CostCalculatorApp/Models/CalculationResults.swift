@@ -6,16 +6,19 @@
 //
 
 import Foundation
+import Observation
 
-class CalculationResults: ObservableObject {
-    @Published var warpCost: Double = 0.0
-    @Published var weftCost: Double = 0.0
-    @Published var warpingCost: Double = 0.0
-    @Published var laborCost: Double = 0.0
-    @Published var totalCost: Double = 0.0
-    @Published var dailyProduct: Double = 0.0
-    @Published var warpWeight: Double = 0.0
-    @Published var weftWeight: Double = 0.0
-    
-    @Published var perMaterialResults: [MaterialCalculationResult] = []
+@Observable
+@MainActor
+final class CalculationResults {
+    var warpCost: Double = 0.0
+    var weftCost: Double = 0.0
+    var warpingCost: Double = 0.0
+    var laborCost: Double = 0.0
+    var totalCost: Double = 0.0
+    var dailyProduct: Double = 0.0
+    var warpWeight: Double = 0.0
+    var weftWeight: Double = 0.0
+
+    var perMaterialResults: [MaterialCalculationResult] = []
 }

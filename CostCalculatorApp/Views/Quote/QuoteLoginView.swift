@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct QuoteLoginView: View {
-    @StateObject private var authManager = QuoteAuthManager.shared
+    @State private var authManager = QuoteAuthManager.shared
     @State private var username = ""
     @State private var password = ""
     @State private var errorMessage: String?

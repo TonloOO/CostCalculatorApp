@@ -6,12 +6,15 @@
 //
 
 import Foundation
+import Observation
 import SwiftUI
 
-class CloudKitSettingsManager: ObservableObject {
+@Observable
+@MainActor
+final class CloudKitSettingsManager {
     static let shared = CloudKitSettingsManager()
-    
-    @Published var isCloudKitEnabled: Bool {
+
+    var isCloudKitEnabled: Bool {
         didSet {
             UserDefaults.standard.set(isCloudKitEnabled, forKey: "cloudKitEnabled")
             if oldValue != isCloudKitEnabled {
@@ -19,9 +22,9 @@ class CloudKitSettingsManager: ObservableObject {
             }
         }
     }
-    
-    @Published var showRestartAlert = false
-    
+
+    var showRestartAlert = false
+
     private init() {
         self.isCloudKitEnabled = UserDefaults.standard.bool(forKey: "cloudKitEnabled")
     }

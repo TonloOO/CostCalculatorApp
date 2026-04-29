@@ -1,22 +1,23 @@
 import Foundation
 import CoreData
+import Observation
 import UIKit
-import Combine
 
+@Observable
 @MainActor
-final class ChatViewModel: ObservableObject {
-    @Published var messages: [ChatDisplayMessage] = []
-    @Published var conversations: [ChatConversationDisplay] = []
-    @Published var inputText: String = ""
-    @Published var isSending: Bool = false
-    @Published var selectedImage: UIImage?
-    @Published var isRecognizing: Bool = false
-    @Published var errorMessage: String?
-    @Published var showError: Bool = false
+final class ChatViewModel {
+    var messages: [ChatDisplayMessage] = []
+    var conversations: [ChatConversationDisplay] = []
+    var inputText: String = ""
+    var isSending: Bool = false
+    var selectedImage: UIImage?
+    var isRecognizing: Bool = false
+    var errorMessage: String?
+    var showError: Bool = false
 
-    @Published var navigateToCalculator: Bool = false
-    @Published var recognitionForCalculator: TextileRecognitionResult?
-    @Published var scrollToBottomTrigger: UUID = UUID()
+    var navigateToCalculator: Bool = false
+    var recognitionForCalculator: TextileRecognitionResult?
+    var scrollToBottomTrigger: UUID = UUID()
 
     private var currentConversationID: UUID?
     private var lastScrollTime: Date = .distantPast
@@ -165,40 +166,40 @@ final class ChatViewModel: ObservableObject {
         messages.append(processingMsg)
         requestScrollToBottom()
 
-        chatService.recognizeTextile(image: image) { [weak self] result in
-            Task { @MainActor in
-                guard let self = self else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let recognition = try await chatService.recognizeTextile(image: image)
                 self.messages.removeLast()
                 self.isRecognizing = false
 
-                switch result {
-                case .success(let recognition):
-                    let cardMessage = ChatDisplayMessage(
-                        text: "识别完成",
-                        role: .assistant,
-                        recognitionResult: recognition,
-                        isRecognitionCard: true
-                    )
-                    self.messages.append(cardMessage)
-                    self.saveMessage(cardMessage)
-                    self.requestScrollToBottom()
+                let cardMessage = ChatDisplayMessage(
+                    text: "识别完成",
+                    role: .assistant,
+                    recognitionResult: recognition,
+                    isRecognitionCard: true
+                )
+                self.messages.append(cardMessage)
+                self.saveMessage(cardMessage)
+                self.requestScrollToBottom()
 
-                    if !userText.isEmpty {
-                        self.streamTextResponse()
-                    } else {
-                        self.isSending = false
-                    }
-
-                case .failure(let error):
-                    let errorMsg = ChatDisplayMessage(
-                        text: "识别失败: \(error.localizedDescription)",
-                        role: .assistant
-                    )
-                    self.messages.append(errorMsg)
-                    self.saveMessage(errorMsg)
-                    self.requestScrollToBottom()
+                if !userText.isEmpty {
+                    self.streamTextResponse()
+                } else {
                     self.isSending = false
                 }
+            } catch {
+                self.messages.removeLast()
+                self.isRecognizing = false
+
+                let errorMsg = ChatDisplayMessage(
+                    text: "识别失败: \(error.localizedDescription)",
+                    role: .assistant
+                )
+                self.messages.append(errorMsg)
+                self.saveMessage(errorMsg)
+                self.requestScrollToBottom()
+                self.isSending = false
             }
         }
     }

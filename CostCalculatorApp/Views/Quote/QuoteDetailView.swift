@@ -123,7 +123,7 @@ struct QuoteDetailView: View {
                         .font(AppTheme.Typography.footnote)
                         .foregroundStyle(AppTheme.Colors.tertiaryText)
                     Spacer()
-                    Text(String(format: "¥%.2f", price))
+                    Text("¥\(price, format: .number.precision(.fractionLength(2)))")
                         .font(AppTheme.Typography.title2)
                         .fontWeight(.bold)
                         .foregroundStyle(AppTheme.Colors.primary)
@@ -347,7 +347,7 @@ struct QuoteDetailView: View {
                                 .foregroundStyle(AppTheme.Colors.secondaryText)
                         }
                         if let price = f.price {
-                            Text(String(format: "¥%.2f", price))
+                            Text("¥\(price, format: .number.precision(.fractionLength(2)))")
                                 .font(AppTheme.Typography.footnote)
                                 .foregroundStyle(AppTheme.Colors.primaryText)
                                 .fontWeight(.medium)

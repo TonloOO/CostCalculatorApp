@@ -60,11 +60,11 @@ struct AppTheme {
         static let secondaryText = Color(UIColor.secondaryLabel)
         static let tertiaryText = Color(UIColor.tertiaryLabel)
         
-        // Status Colors
-        static let success = Color(hex: "4CAF50")
-        static let warning = Color(hex: "FFC107")
-        static let error = Color(hex: "F44336")
-        static let info = Color(hex: "2196F3")
+        // Status Colors (system-adaptive)
+        static let success = Color.green
+        static let warning = Color.orange
+        static let error = Color.red
+        static let info = Color.blue
         
         // Shadow Color
         static let shadow = Color.black.opacity(0.1)

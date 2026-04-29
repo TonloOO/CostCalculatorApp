@@ -406,7 +406,7 @@ struct QuoteCreateView: View {
                     Text("原料成本")
                         .font(.caption)
                     Spacer()
-                    Text(String(format: "¥%.4f /米", cost))
+                    Text("¥\(cost, format: .number.precision(.fractionLength(4))) /米")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                 }

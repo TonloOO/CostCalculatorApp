@@ -6,15 +6,18 @@
 //
 
 import Foundation
+import Observation
 import Security
 
-final class QuoteAuthManager: ObservableObject {
+@Observable
+@MainActor
+final class QuoteAuthManager {
     static let shared = QuoteAuthManager()
-    
-    @Published var isLoggedIn: Bool
-    @Published var currentUser: String?
-    @Published var isLoading = false
-    @Published private(set) var canApprove: Bool
+
+    var isLoggedIn: Bool
+    var currentUser: String?
+    var isLoading = false
+    private(set) var canApprove: Bool
     
     private(set) var userGuid: String?
     private(set) var userId: String?
@@ -60,15 +63,15 @@ final class QuoteAuthManager: ObservableObject {
         }
     }
     
-    var authToken: String? {
+    nonisolated var authToken: String? {
         Self.readKeychain(account: keychainTokenAccount)
     }
 
-    var appSecret: String? {
+    nonisolated var appSecret: String? {
         Self.readKeychain(account: keychainSecretAccount)
     }
 
-    func saveAppSecret(_ secret: String) {
+    nonisolated func saveAppSecret(_ secret: String) {
         let trimmed = secret.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
             Self.deleteKeychain(account: keychainSecretAccount)
@@ -130,28 +133,26 @@ final class QuoteAuthManager: ObservableObject {
             }
             
             let loginResponse = try JSONDecoder().decode(ERPLoginResponse.self, from: data)
-            
-            await MainActor.run {
-                Self.saveKeychain(account: keychainTokenAccount, value: loginResponse.token)
-                
-                UserDefaults.standard.set(loginResponse.userName, forKey: UDKey.username)
-                UserDefaults.standard.set(loginResponse.userGuid, forKey: UDKey.userGuid)
-                UserDefaults.standard.set(loginResponse.userId, forKey: UDKey.userId)
-                UserDefaults.standard.set(loginResponse.userType, forKey: UDKey.userType)
-                UserDefaults.standard.set(loginResponse.role, forKey: UDKey.role)
-                UserDefaults.standard.set(loginResponse.canApprove, forKey: UDKey.canApprove)
-                Self.saveSalesInfo(loginResponse.sales)
-                
-                isLoggedIn = true
-                currentUser = loginResponse.userName
-                userGuid = loginResponse.userGuid
-                userId = loginResponse.userId
-                userType = loginResponse.userType
-                role = loginResponse.role
-                canApprove = loginResponse.canApprove
-                salesInfo = loginResponse.sales
-            }
-            
+
+            Self.saveKeychain(account: keychainTokenAccount, value: loginResponse.token)
+
+            UserDefaults.standard.set(loginResponse.userName, forKey: UDKey.username)
+            UserDefaults.standard.set(loginResponse.userGuid, forKey: UDKey.userGuid)
+            UserDefaults.standard.set(loginResponse.userId, forKey: UDKey.userId)
+            UserDefaults.standard.set(loginResponse.userType, forKey: UDKey.userType)
+            UserDefaults.standard.set(loginResponse.role, forKey: UDKey.role)
+            UserDefaults.standard.set(loginResponse.canApprove, forKey: UDKey.canApprove)
+            Self.saveSalesInfo(loginResponse.sales)
+
+            isLoggedIn = true
+            currentUser = loginResponse.userName
+            userGuid = loginResponse.userGuid
+            userId = loginResponse.userId
+            userType = loginResponse.userType
+            role = loginResponse.role
+            canApprove = loginResponse.canApprove
+            salesInfo = loginResponse.sales
+
             return .success(())
             
         } catch is DecodingError {
@@ -200,7 +201,7 @@ final class QuoteAuthManager: ObservableObject {
     
     // MARK: - Keychain Helpers
     
-    static func saveKeychain(account: String, value: String) {
+    nonisolated static func saveKeychain(account: String, value: String) {
         deleteKeychain(account: account)
         let data = value.data(using: .utf8)!
         let query: [String: Any] = [
@@ -211,7 +212,7 @@ final class QuoteAuthManager: ObservableObject {
         SecItemAdd(query as CFDictionary, nil)
     }
     
-    static func readKeychain(account: String) -> String? {
+    nonisolated static func readKeychain(account: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: account,
@@ -224,7 +225,7 @@ final class QuoteAuthManager: ObservableObject {
         return String(data: data, encoding: .utf8)
     }
     
-    static func deleteKeychain(account: String) {
+    nonisolated static func deleteKeychain(account: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: account

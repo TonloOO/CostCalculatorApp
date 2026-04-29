@@ -25,6 +25,7 @@ struct Calculator {
     }
     
     // MARK: - Main Calculation Function
+    @MainActor
     static func calculate(
         boxNumber: String,
         threading: String,
@@ -431,6 +432,7 @@ struct Calculator {
         return defaultDValue / yarnValue
     }
     
+    @MainActor
     private static func updateCalculationResults(
         calculationResults: CalculationResults,
         materialResults: MaterialCalculationResults,

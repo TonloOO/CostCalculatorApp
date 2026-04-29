@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct QuoteHomeView: View {
-    @StateObject private var apiService = QuoteAPIService.shared
-    @StateObject private var authManager = QuoteAuthManager.shared
+    @State private var apiService = QuoteAPIService.shared
+    @State private var authManager = QuoteAuthManager.shared
     @State private var isServerOnline = false
     @State private var showSettings = false
     @State private var showCreateQuote = false
@@ -95,7 +95,7 @@ struct QuoteHomeView: View {
 // MARK: - API Settings
 
 struct APISettingsView: View {
-    @StateObject private var apiService = QuoteAPIService.shared
+    @State private var apiService = QuoteAPIService.shared
     @State private var urlInput = ""
     @State private var testResult: Bool?
     @State private var isTesting = false
