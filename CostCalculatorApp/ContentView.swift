@@ -16,7 +16,13 @@ enum AppTab: Hashable {
 
 struct ContentView: View {
     @State private var selectedTab: AppTab = .home
+    @State private var auth = AuthManager.shared
     @ObservedObject private var languageManager = LanguageManager.shared
+
+    /// Statistic tab — exposes machine running status data. Available to admin and manager.
+    private var canSeeStatistic: Bool {
+        auth.isLoggedIn && (auth.role == "admin" || auth.role == "manager")
+    }
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -28,8 +34,10 @@ struct ContentView: View {
                 ChatView()
             }
 
-            Tab("tab_statistics".localized(), systemImage: "chart.bar", value: .statistic) {
-                StatisticHomeView()
+            if canSeeStatistic {
+                Tab("tab_statistics".localized(), systemImage: "chart.bar", value: .statistic) {
+                    StatisticHomeView()
+                }
             }
 
             Tab("tab_settings".localized(), systemImage: "gearshape", value: .setting) {
@@ -37,6 +45,11 @@ struct ContentView: View {
             }
         }
         .id(languageManager.currentLanguage.rawValue)
+        .onChange(of: canSeeStatistic) { _, canSee in
+            if !canSee && selectedTab == .statistic {
+                selectedTab = .home
+            }
+        }
     }
 }
 

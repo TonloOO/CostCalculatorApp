@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @State private var authManager = QuoteAuthManager.shared
+    @State private var authManager = AuthManager.shared
     
     var body: some View {
         NavigationStack {
@@ -79,20 +79,21 @@ struct HomeView: View {
         if authManager.isLoggedIn {
             QuoteHomeView()
         } else {
-            QuoteLoginGateView()
+            ReportLoginGate()
         }
     }
 }
 
-/// Wraps login → auto-navigate to QuoteHomeView on success
-struct QuoteLoginGateView: View {
-    @State private var authManager = QuoteAuthManager.shared
-    
+/// Wraps login → auto-navigate to QuoteHomeView on success.
+/// Used when entering the report module from HomeView while not logged in.
+struct ReportLoginGate: View {
+    @State private var authManager = AuthManager.shared
+
     var body: some View {
         if authManager.isLoggedIn {
             QuoteHomeView()
         } else {
-            QuoteLoginView()
+            LoginView(dismissOnSuccess: false)
         }
     }
 }

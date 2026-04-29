@@ -823,7 +823,7 @@ class QuoteOverviewViewModel: ObservableObject {
     private var currentPage = 1
     private var totalPages = 1
     private let service = QuoteAPIService.shared
-    let authManager = QuoteAuthManager.shared
+    let authManager = AuthManager.shared
     
     var hasMore: Bool { currentPage < totalPages }
     

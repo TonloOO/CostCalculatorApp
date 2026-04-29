@@ -183,11 +183,11 @@ final class QuoteAPIService {
         request.timeoutInterval = 15
         request.addValue("application/json", forHTTPHeaderField: "Accept")
 
-        if let token = QuoteAuthManager.shared.authToken {
+        if let token = AuthManager.shared.authToken {
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
-        if let secret = QuoteAuthManager.shared.appSecret, !secret.isEmpty {
+        if let secret = AuthManager.shared.appSecret, !secret.isEmpty {
             request.addValue(secret, forHTTPHeaderField: "X-App-Secret")
         }
 
@@ -203,7 +203,7 @@ final class QuoteAPIService {
         }
         
         if httpResponse.statusCode == 401 {
-            QuoteAuthManager.shared.logout()
+            AuthManager.shared.logout()
             throw QuoteAPIError.unauthorized
         }
 

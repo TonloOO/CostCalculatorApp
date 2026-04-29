@@ -986,7 +986,7 @@ final class QuoteCreateViewModel: ObservableObject {
 
     private let mode: QuoteFormMode
     private let service = QuoteAPIService.shared
-    private let authManager = QuoteAuthManager.shared
+    private let authManager = AuthManager.shared
     private let calculationConstants = CalculationConstants.defaultConstants
     private var searchTask: Task<Void, Never>?
     private var calculationCancellables: Set<AnyCancellable> = []
