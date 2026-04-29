@@ -367,7 +367,7 @@ struct QuoteOverviewCard: View {
                         Text("报价")
                             .font(AppTheme.Typography.caption2)
                             .foregroundStyle(AppTheme.Colors.tertiaryText)
-                        Text(String(format: "¥%.2f", price))
+                        Text("¥\(price, format: .number.precision(.fractionLength(2)))")
                             .font(AppTheme.Typography.title3)
                             .foregroundStyle(AppTheme.Colors.primary)
                             .fontWeight(.bold)
@@ -461,13 +461,13 @@ struct QuoteOverviewCard: View {
 
                                 VStack(alignment: .trailing, spacing: 3) {
                                     if let yarnUseQty = material.yarnUseQty {
-                                        Text(String(format: "用纱量 %.2f", yarnUseQty))
+                                        Text("用纱量 \(yarnUseQty, format: .number.precision(.fractionLength(2)))")
                                             .font(AppTheme.Typography.caption2)
                                             .foregroundStyle(AppTheme.Colors.secondaryText)
                                     }
 
                                     if let price = material.unitPrice {
-                                        Text(String(format: "原料单价 ¥%.2f", price))
+                                        Text("原料单价 ¥\(price, format: .number.precision(.fractionLength(2)))")
                                             .font(AppTheme.Typography.caption2)
                                             .foregroundStyle(AppTheme.Colors.secondaryText)
                                             .fontWeight(.medium)

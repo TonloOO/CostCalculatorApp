@@ -3,7 +3,7 @@ import PhotosUI
 
 struct ChatView: View {
     @Environment(\.managedObjectContext) private var viewContext
-    @StateObject private var viewModel: ChatViewModel
+    @State private var viewModel: ChatViewModel
     @State private var showConversationList = false
     @State private var showImageSourcePicker = false
     @State private var showCamera = false
@@ -13,7 +13,7 @@ struct ChatView: View {
 
     init() {
         let context = PersistenceController.shared.container.viewContext
-        _viewModel = StateObject(wrappedValue: ChatViewModel(context: context))
+        _viewModel = State(wrappedValue: ChatViewModel(context: context))
     }
 
     var body: some View {

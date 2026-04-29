@@ -82,7 +82,7 @@ struct CostCalculatorView: View {
     @State private var constants: CalculationConstants = CalculationConstants.defaultConstants
 
     // Calculation results
-    @StateObject private var calculationResults = CalculationResults()
+    @State private var calculationResults = CalculationResults()
 
     // Active sheet management
     @State private var activeSheet: ActiveSheet?

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @StateObject private var authManager = QuoteAuthManager.shared
+    @State private var authManager = QuoteAuthManager.shared
     
     var body: some View {
         NavigationStack {
@@ -86,7 +86,7 @@ struct HomeView: View {
 
 /// Wraps login → auto-navigate to QuoteHomeView on success
 struct QuoteLoginGateView: View {
-    @StateObject private var authManager = QuoteAuthManager.shared
+    @State private var authManager = QuoteAuthManager.shared
     
     var body: some View {
         if authManager.isLoggedIn {

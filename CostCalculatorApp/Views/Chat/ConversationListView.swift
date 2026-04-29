@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ConversationListView: View {
-    @ObservedObject var viewModel: ChatViewModel
+    @Bindable var viewModel: ChatViewModel
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {

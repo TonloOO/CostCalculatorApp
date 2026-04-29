@@ -6,18 +6,21 @@
 //
 
 import Foundation
+import Observation
 
-final class QuoteAPIService: ObservableObject {
+@Observable
+@MainActor
+final class QuoteAPIService {
     static let shared = QuoteAPIService()
-    
+
     /// Base URL for the XZX API, configurable via UserDefaults.
     /// Defaults to localhost for simulator development.
-    @Published var baseURL: String {
+    var baseURL: String {
         didSet {
             UserDefaults.standard.set(baseURL, forKey: "xzx_api_base_url")
         }
     }
-    
+
     private init() {
         self.baseURL = UserDefaults.standard.string(forKey: "xzx_api_base_url")
             ?? "http://1.94.161.134:8808"
@@ -200,7 +203,7 @@ final class QuoteAPIService: ObservableObject {
         }
         
         if httpResponse.statusCode == 401 {
-            await MainActor.run { QuoteAuthManager.shared.logout() }
+            QuoteAuthManager.shared.logout()
             throw QuoteAPIError.unauthorized
         }
 

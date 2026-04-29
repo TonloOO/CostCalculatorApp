@@ -7,7 +7,7 @@ struct ProfileView: View {
     @State private var showingLanguageSettings = false
     @State private var showingAISettings = false
     @State private var languageChanged = false
-    @StateObject private var cloudKitSettings = CloudKitSettingsManager.shared
+    @State private var cloudKitSettings = CloudKitSettingsManager.shared
     @ObservedObject private var languageManager = LanguageManager.shared
 
     var body: some View {
@@ -224,7 +224,7 @@ struct ThemedSettingsRow: View {
 }
 
 struct CloudKitThemedRow: View {
-    @ObservedObject var cloudKitSettings: CloudKitSettingsManager
+    @Bindable var cloudKitSettings: CloudKitSettingsManager
     let action: () -> Void
 
     var body: some View {
@@ -725,7 +725,7 @@ struct AboutView: View {
 
 struct CloudKitSettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var cloudKitSettings = CloudKitSettingsManager.shared
+    @State private var cloudKitSettings = CloudKitSettingsManager.shared
     @State private var languageChanged = false
 
     var body: some View {

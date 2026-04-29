@@ -335,7 +335,7 @@ struct HistoryRecordRow: View {
                     .font(.system(size: 13))
                     .foregroundStyle(AppTheme.Colors.secondaryText)
                 Spacer()
-                Text(String(format: "%.3f", record.totalCost))
+                Text(record.totalCost, format: .number.precision(.fractionLength(3)))
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(AppTheme.Colors.accent)
                 Text("元/米")

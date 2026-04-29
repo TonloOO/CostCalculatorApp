@@ -1,22 +1,23 @@
 import Foundation
 import CoreData
+import Observation
 import UIKit
-import Combine
 
+@Observable
 @MainActor
-final class ChatViewModel: ObservableObject {
-    @Published var messages: [ChatDisplayMessage] = []
-    @Published var conversations: [ChatConversationDisplay] = []
-    @Published var inputText: String = ""
-    @Published var isSending: Bool = false
-    @Published var selectedImage: UIImage?
-    @Published var isRecognizing: Bool = false
-    @Published var errorMessage: String?
-    @Published var showError: Bool = false
+final class ChatViewModel {
+    var messages: [ChatDisplayMessage] = []
+    var conversations: [ChatConversationDisplay] = []
+    var inputText: String = ""
+    var isSending: Bool = false
+    var selectedImage: UIImage?
+    var isRecognizing: Bool = false
+    var errorMessage: String?
+    var showError: Bool = false
 
-    @Published var navigateToCalculator: Bool = false
-    @Published var recognitionForCalculator: TextileRecognitionResult?
-    @Published var scrollToBottomTrigger: UUID = UUID()
+    var navigateToCalculator: Bool = false
+    var recognitionForCalculator: TextileRecognitionResult?
+    var scrollToBottomTrigger: UUID = UUID()
 
     private var currentConversationID: UUID?
     private var lastScrollTime: Date = .distantPast

@@ -43,7 +43,7 @@ struct EditCalculationView: View {
     @State private var weftDivider: Double
 
     // Calculation results
-    @StateObject private var calculationResults = CalculationResults()
+    @State private var calculationResults = CalculationResults()
 
     // Alert message
     @State private var showAlert = false
