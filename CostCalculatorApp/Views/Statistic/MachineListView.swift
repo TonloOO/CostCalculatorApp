@@ -75,7 +75,11 @@ struct MachineListView: View {
                         bucketFilter = nil
                         Task { await load() }
                     } label: {
-                        Label("全部", systemImage: bucketFilter == nil ? "checkmark" : "")
+                        if bucketFilter == nil {
+                            Label("全部", systemImage: "checkmark")
+                        } else {
+                            Text("全部")
+                        }
                     }
                     Divider()
                     ForEach(MachineBucket.allCases, id: \.self) { bucket in
@@ -83,10 +87,11 @@ struct MachineListView: View {
                             bucketFilter = bucket
                             Task { await load() }
                         } label: {
-                            Label(
-                                bucket.displayName,
-                                systemImage: bucketFilter == bucket ? "checkmark" : ""
-                            )
+                            if bucketFilter == bucket {
+                                Label(bucket.displayName, systemImage: "checkmark")
+                            } else {
+                                Text(bucket.displayName)
+                            }
                         }
                     }
                 } label: {

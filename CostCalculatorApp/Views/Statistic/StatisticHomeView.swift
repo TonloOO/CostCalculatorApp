@@ -8,11 +8,35 @@
 import SwiftUI
 import Charts
 
+enum TrendMetric: String, CaseIterable, Hashable {
+    case active = "活跃机台"
+    case length = "总产量"
+}
+
+enum TrendWindow: Int, CaseIterable, Hashable, Identifiable {
+    case week = 7
+    case month = 30
+    case quarter = 90
+    case year = 365
+
+    var id: Int { rawValue }
+    var displayName: String {
+        switch self {
+        case .week:    return "7 天"
+        case .month:   return "30 天"
+        case .quarter: return "90 天"
+        case .year:    return "1 年"
+        }
+    }
+}
+
 struct StatisticHomeView: View {
     @State private var apiService = MachineAPIService.shared
     @State private var overview: MachineOverview?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var trendMetric: TrendMetric = .active
+    @State private var trendWindow: TrendWindow = .week
 
     var body: some View {
         NavigationStack {
@@ -33,6 +57,9 @@ struct StatisticHomeView: View {
             }
             .task {
                 if overview == nil { await load() }
+            }
+            .onChange(of: trendWindow) { _, _ in
+                Task { await load() }
             }
         }
     }
@@ -118,26 +145,54 @@ struct StatisticHomeView: View {
     private var trendCard: some View {
         if let trend = overview?.trend, !trend.isEmpty {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
-                Text("最近 7 日趋势")
-                    .font(AppTheme.Typography.headline)
-                    .foregroundStyle(AppTheme.Colors.primaryText)
+                HStack {
+                    Text("最近\(trendWindow.displayName)趋势")
+                        .font(AppTheme.Typography.headline)
+                        .foregroundStyle(AppTheme.Colors.primaryText)
+                    Spacer()
+                }
+
+                Picker("窗口", selection: $trendWindow) {
+                    ForEach(TrendWindow.allCases) { window in
+                        Text(window.displayName).tag(window)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Picker("指标", selection: $trendMetric) {
+                    ForEach(TrendMetric.allCases, id: \.self) { metric in
+                        Text(metric.rawValue).tag(metric)
+                    }
+                }
+                .pickerStyle(.segmented)
 
                 Chart(trend) { day in
                     BarMark(
                         x: .value("日期", shortDate(day.date)),
-                        y: .value("活跃机台", day.activeMachines)
+                        y: .value(trendMetric.rawValue, trendValue(for: day))
                     )
                     .foregroundStyle(AppTheme.Colors.primary)
-                    .cornerRadius(4)
+                    .cornerRadius(barCornerRadius)
                 }
                 .frame(height: 160)
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: trendXAxisDesiredCount))
+                }
                 .chartYAxis {
-                    AxisMarks(position: .leading)
+                    AxisMarks(position: .leading) { value in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel {
+                            if let raw = value.as(Double.self) {
+                                Text(formatTrendY(raw))
+                            }
+                        }
+                    }
                 }
 
                 HStack {
                     Image(systemName: "info.circle")
-                    Text("柱高 = 当日活跃机台数")
+                    Text(trendCaption)
                 }
                 .font(AppTheme.Typography.caption2)
                 .foregroundStyle(AppTheme.Colors.tertiaryText)
@@ -149,6 +204,48 @@ struct StatisticHomeView: View {
             .shadow(color: AppTheme.Colors.shadow, radius: 4, x: 0, y: 2)
         } else if isLoading {
             placeholderCard(height: 200)
+        }
+    }
+
+    private var barCornerRadius: CGFloat {
+        switch trendWindow {
+        case .week:    return 4
+        case .month:   return 2
+        case .quarter, .year: return 1
+        }
+    }
+
+    private var trendXAxisDesiredCount: Int {
+        switch trendWindow {
+        case .week:    return 7
+        case .month:   return 6
+        case .quarter: return 6
+        case .year:    return 6
+        }
+    }
+
+    private func trendValue(for day: MachineDailyTrend) -> Double {
+        switch trendMetric {
+        case .active: return Double(day.activeMachines)
+        case .length: return day.totalLength
+        }
+    }
+
+    private var trendCaption: String {
+        switch trendMetric {
+        case .active: return "柱高 = 当日活跃机台数"
+        case .length: return "柱高 = 当日总产量（米）"
+        }
+    }
+
+    private func formatTrendY(_ value: Double) -> String {
+        switch trendMetric {
+        case .active:
+            return String(Int(value))
+        case .length:
+            return value >= 10_000
+                ? String(format: "%.0f万", value / 10_000)
+                : String(Int(value))
         }
     }
 
@@ -246,7 +343,7 @@ struct StatisticHomeView: View {
         isLoading = true
         errorMessage = nil
         do {
-            overview = try await apiService.fetchOverview()
+            overview = try await apiService.fetchOverview(trendDays: trendWindow.rawValue)
         } catch {
             errorMessage = error.localizedDescription
         }

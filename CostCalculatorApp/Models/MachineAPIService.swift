@@ -21,9 +21,10 @@ final class MachineAPIService {
         QuoteAPIService.shared.baseURL
     }
 
-    func fetchOverview() async throws -> MachineOverview {
-        let url = URL(string: "\(baseURL)/api/machine/overview")!
-        return try await performRequest(url: url)
+    func fetchOverview(trendDays: Int = 7) async throws -> MachineOverview {
+        var components = URLComponents(string: "\(baseURL)/api/machine/overview")!
+        components.queryItems = [URLQueryItem(name: "trend_days", value: "\(trendDays)")]
+        return try await performRequest(url: components.url!)
     }
 
     func fetchList(bucket: MachineBucket?) async throws -> [MachineListItem] {
